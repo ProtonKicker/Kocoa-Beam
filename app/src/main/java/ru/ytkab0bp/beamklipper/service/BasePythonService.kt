@@ -14,6 +14,7 @@ import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
 import kotlinx.coroutines.runBlocking
 import java.io.File
+import java.util.concurrent.CountDownLatch
 import ru.ytkab0bp.beamklipper.KlipperApp
 import ru.ytkab0bp.beamklipper.KlipperInstance
 
@@ -27,6 +28,7 @@ open class BasePythonService : Service() {
     private var py: Python? = null
     private var pythonThread: HandlerThread? = null
     private var pythonHandler: Handler? = null
+    private val pythonReady = CountDownLatch(1)
     protected var instance: KlipperInstance? = null
     protected lateinit var notificationManager: NotificationManager
 
@@ -39,6 +41,7 @@ open class BasePythonService : Service() {
         instance = KlipperInstance.getInstance(id)
         pythonHandler?.post {
             runBlocking { KlipperApp.bundleInstallJob.await() }
+            pythonReady.await()
             onStartPython()
         }
         return serviceBinder
@@ -86,6 +89,7 @@ open class BasePythonService : Service() {
                     try { Thread.sleep(500L * (retries + 1)) } catch (_: InterruptedException) {}
                 }
             }
+            pythonReady.countDown()
             if (py == null) {
                 Log.e(TAG, "Failed to start Python after ${retries + 1} attempts, stopping service", lastErr)
                 stopSelf()

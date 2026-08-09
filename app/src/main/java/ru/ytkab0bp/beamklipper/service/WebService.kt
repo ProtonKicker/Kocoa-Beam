@@ -595,7 +595,12 @@ class WebService : Service() {
                         }
                     val r = Response.newChunkedResponse(resStatus, con.contentType, responseStream)
                     for ((key, values) in con.headerFields) {
-                        for (value in values) {
+                        if (key.isNullOrEmpty()) continue
+                        if (key.equals("content-length", true)) continue
+                        if (key.equals("transfer-encoding", true)) continue
+                        if (key.equals("connection", true)) continue
+                        val headerValues = values ?: continue
+                        for (value in headerValues) {
                             r.addHeader(key, value)
                         }
                     }

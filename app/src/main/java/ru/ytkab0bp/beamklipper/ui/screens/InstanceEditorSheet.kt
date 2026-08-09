@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
@@ -272,25 +274,57 @@ fun InstanceEditorSheet(
     }
 
     if (showConfigPicker) {
-        Dialog(onDismissRequest = { showConfigPicker = false }) {
-            Box(modifier = Modifier.padding(20.dp)) {
+        Dialog(
+            onDismissRequest = { showConfigPicker = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                val dialogMaxHeight = maxHeight
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .heightIn(max = dialogMaxHeight)
                         .background(Paper, RectangleShape)
                         .border(2.dp, Ink, RectangleShape)
                 ) {
-                    Column(modifier = Modifier.padding(24.dp)) {
-                        Text(
-                            text = stringResource(R.string.InstanceConfig),
-                            style = MaterialTheme.typography.titleLarge,
-                            color = Ink
-                        )
-                        Spacer(Modifier.height(8.dp))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = dialogMaxHeight)
+                            .padding(24.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(R.string.InstanceConfig),
+                                style = MaterialTheme.typography.titleLarge,
+                                color = Ink,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            BrutalButton(
+                                text = stringResource(android.R.string.cancel),
+                                onClick = { showConfigPicker = false },
+                                background = Paper,
+                                contentColor = Ink,
+                                minHeight = 36.dp,
+                                modifier = Modifier.height(36.dp)
+                            )
+                        }
+                        Spacer(Modifier.height(12.dp))
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .weight(1f, fill = false)
                                 .verticalScroll(rememberScrollState())
+                                .padding(bottom = 12.dp)
                         ) {
                             filesList.forEach { f ->
                                 Row(
@@ -305,16 +339,6 @@ fun InstanceEditorSheet(
                                     Text(f, style = MaterialTheme.typography.bodyLarge, color = Ink)
                                 }
                             }
-                        }
-                        Spacer(Modifier.height(16.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
-                        ) {
-                            BrutalButton(
-                                text = stringResource(android.R.string.cancel),
-                                onClick = { showConfigPicker = false }
-                            )
                         }
                     }
                 }
@@ -361,7 +385,7 @@ fun InstanceEditorSheet(
 }
 
 private fun openInstanceFolder(context: android.content.Context, instance: KlipperInstance) {
-    val uri = android.provider.DocumentsContract.buildRootUri(ru.ytkab0bp.beamklipper.BuildConfig.APPLICATION_ID, instance.id)
+    val uri = android.provider.DocumentsContract.buildRootUri(context.packageName, instance.id)
     try {
         try {
             try {

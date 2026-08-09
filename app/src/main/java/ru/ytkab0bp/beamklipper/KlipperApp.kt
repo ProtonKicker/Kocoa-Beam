@@ -34,7 +34,9 @@ class KlipperApp : MultiDexApplication() {
         Prefs.init(this)
         DATABASE = BeamDB(this)
         EventBus.registerImpl(this)
-        Prefs.applyAppLanguage()
+        if (Prefs.appLanguage != Prefs.LANGUAGE_SYSTEM) {
+            Prefs.applyAppLanguage()
+        }
 
         hasUpdateInfo = try {
             assets.open("update.json").close()
@@ -166,8 +168,8 @@ class KlipperApp : MultiDexApplication() {
             }
         }
 
-        @JvmField
-        val PERMISSION = BuildConfig.APPLICATION_ID + ".permission.INTERNAL_BROADCASTS"
+        val PERMISSION: String
+            get() = INSTANCE.packageName + ".permission.INTERNAL_BROADCASTS"
         @JvmField
         val SERVICES_CHANNEL = "services"
 

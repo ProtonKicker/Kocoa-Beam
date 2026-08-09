@@ -105,52 +105,54 @@ fun QRCodeDialog(
                         }
                     }
                     Spacer(Modifier.height(16.dp))
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
                             modifier = Modifier
-                                .fillMaxWidth()
+                                .weight(1f)
+                                .height(44.dp)
                                 .border(2.dp, Ink, RectangleShape)
                                 .clip(RectangleShape)
                                 .clickable { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(link))) }
                                 .background(Paper)
-                                .padding(horizontal = 14.dp, vertical = 12.dp)
+                                .padding(horizontal = 14.dp)
                         ) {
-                            Text(
-                                text = link,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Ink,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .background(Paper, RectangleShape)
-                                    .border(2.dp, Ink, RectangleShape)
-                                    .clickable {
-                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                        clipboard.setPrimaryClip(ClipData.newPlainText("", link))
-                                    },
-                                contentAlignment = Alignment.Center
+                            Row(
+                                modifier = Modifier.fillMaxSize(),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
+                                Text(
+                                    text = link,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Ink,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Spacer(Modifier.width(8.dp))
                                 Icon(
-                                    painterResource(R.drawable.ic_copy_outline_24),
-                                    contentDescription = stringResource(R.string.QRCopy),
+                                    painterResource(R.drawable.ic_external_link_outline_24),
+                                    contentDescription = stringResource(R.string.QROpen),
                                     tint = Ink,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
+                        Spacer(Modifier.width(8.dp))
+                        BrutalButton(
+                            text = stringResource(R.string.QRCopy),
+                            onClick = {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                clipboard.setPrimaryClip(ClipData.newPlainText("", link))
+                            },
+                            background = Paper,
+                            contentColor = Ink,
+                            minHeight = 44.dp,
+                            modifier = Modifier.height(44.dp)
+                        )
                     }
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = "Tap link to open · tap icon to copy",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Ink
-                    )
                     Spacer(Modifier.height(16.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
