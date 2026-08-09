@@ -187,12 +187,17 @@ fun HomeScreen(
                                 derivedStateOf { stateSnapshot[k] ?: inst.getState() }
                             }
                             val onClickInst by rememberUpdatedState(onClick@{
-                                editorInstance = inst
+                                val id = inst.id ?: return@onClick
+                                val canonical = KlipperInstance.getInstance(id) ?: return@onClick
+                                editorInstance = canonical
                                 editorVisible = true
                             })
                             val onLongClickInst by rememberUpdatedState(onLongClick@{
-                                deleteInstance = inst
+                                val id = inst.id ?: return@onLongClick
+                                val canonical = KlipperInstance.getInstance(id) ?: return@onLongClick
+                                deleteInstance = canonical
                             })
+                            val capturedInst = inst
                             val onToggleInst by rememberUpdatedState(onToggle@{
                                 when (stateVal) {
                                     KlipperInstance.State.STARTING, KlipperInstance.State.STOPPING -> {}
@@ -200,10 +205,10 @@ fun HomeScreen(
                                         if (!KlipperInstance.hasFreeSlots()) {
                                             noFreeSlots = true
                                         } else {
-                                            mainViewModel.toggle(inst)
+                                            mainViewModel.toggle(capturedInst)
                                         }
                                     }
-                                    else -> mainViewModel.toggle(inst)
+                                    else -> mainViewModel.toggle(capturedInst)
                                 }
                             })
                             val instBg = Paper
@@ -250,12 +255,13 @@ fun HomeScreen(
                                             .fillMaxWidth()
                                             .height(16.dp)
                                     ) {
-                                        if (stateVal == KlipperInstance.State.STARTING || stateVal == KlipperInstance.State.STOPPING || stateVal == KlipperInstance.State.RUNNING) {
-                                            val statusText = when (stateVal) {
-                                                KlipperInstance.State.STARTING -> stringResource(R.string.InstanceStarting)
-                                                KlipperInstance.State.STOPPING -> stringResource(R.string.InstanceStopping)
-                                                else -> "Running"
-                                            }
+                                        val statusText: String? = when (stateVal) {
+                                            KlipperInstance.State.STARTING -> stringResource(R.string.InstanceStarting)
+                                            KlipperInstance.State.STOPPING -> stringResource(R.string.InstanceStopping)
+                                            KlipperInstance.State.RUNNING -> stringResource(R.string.InstanceRunning)
+                                            KlipperInstance.State.IDLE -> stringResource(R.string.InstanceIdle)
+                                        }
+                                        if (statusText != null) {
                                             Text(
                                                 text = statusText,
                                                 style = MaterialTheme.typography.bodySmall,

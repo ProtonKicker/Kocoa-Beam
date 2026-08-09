@@ -28,6 +28,10 @@
     <string name="Instances">Profiles</string>
     <string name="InstanceStarting">Starting…</string>
     <string name="InstanceStopping">Stopping…</string>
+    <string name="InstanceRunning">Running</string>
+    <string name="InstanceIdle">Idle</string>
+    <string name="InstanceDefaultName">Printer %d</string>
+    <string name="InstanceDefaultNameHint">e.g. Printer 1</string>
     <string name="InstanceName">Name</string>
     <string name="InstanceConfig">Config</string>
     <string name="InstanceCreate">Create</string>

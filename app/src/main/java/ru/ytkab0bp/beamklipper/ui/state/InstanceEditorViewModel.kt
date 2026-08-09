@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 import ru.ytkab0bp.beamklipper.InstanceIcon
 import ru.ytkab0bp.beamklipper.KlipperApp
 import ru.ytkab0bp.beamklipper.KlipperInstance
+import ru.ytkab0bp.beamklipper.R
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -27,8 +28,114 @@ class InstanceEditorViewModel(app: Application) : AndroidViewModel(app) {
     private val _configFile = MutableStateFlow<String?>(null)
     val configFile: StateFlow<String?> = _configFile.asStateFlow()
 
+    private val _defaultName = MutableStateFlow<String?>(null)
+    val defaultName: StateFlow<String?> = _defaultName.asStateFlow()
+
     private val _saving = MutableStateFlow(false)
     val saving: StateFlow<Boolean> = _saving.asStateFlow()
+
+    private fun computeDefaultName(): String {
+        val ctx = getApplication<Application>()
+        val (dbNames, slotNames) = collectExistingNames()
+        val existing = (dbNames + slotNames).distinct()
+        for (n in 1..1000) {
+            val candidate = ctx.getString(R.string.InstanceDefaultName, n)
+            if (candidate !in existing) {
+                val (dbNames2, slotNames2) = collectExistingNames()
+                val existing2 = (dbNames2 + slotNames2).distinct()
+                if (candidate !in existing2) return candidate
+            }
+        }
+        val fallbackBase = runCatching {
+            stripTrailingNumber(ctx.getString(R.string.InstanceDefaultName, 1))
+        }.getOrDefault("Printer").ifEmpty { "Printer" }
+        for (n in 1..1000) {
+            val candidate = "$fallbackBase $n"
+            val (dbNames2, slotNames2) = collectExistingNames()
+            val existing2 = (dbNames2 + slotNames2).distinct()
+            if (candidate !in existing2) return candidate
+        }
+        return runCatching { ctx.getString(R.string.InstanceDefaultName, 1) }.getOrDefault("Printer 1")
+    }
+
+    private fun stripTrailingNumber(value: String): String {
+        val s1 = value.trim()
+        val m1 = Regex("""^(.*?)\s*\(\s*\d+\s*\)\s*$""").matchEntire(s1)
+        if (m1 != null) {
+            return m1.groupValues[1].trim()
+        }
+        val m2 = Regex("""^(.*?)\s+\d+\s*$""").matchEntire(s1)
+        if (m2 != null) {
+            return m2.groupValues[1].trim()
+        }
+        return s1
+    }
+
+    private fun collectExistingNames(): Pair<List<String>, List<String>> {
+        val dbNames = runCatching {
+            KlipperApp.getDatabaseOrNull()?.getInstances()?.map { it.name }.orEmpty()
+        }.getOrDefault(emptyList())
+        val slotNames = runCatching {
+            KlipperInstance.getSlotInstancesNames()
+        }.getOrDefault(emptyList())
+        return dbNames to slotNames
+    }
+
+    private fun ensureUniqueName(desired: String, editing: KlipperInstance?): String {
+        if (desired.isEmpty()) return computeDefaultName()
+        val (dbNames, slotNames) = collectExistingNames()
+        val existing = (dbNames + slotNames)
+            .filter { name ->
+                when {
+                    editing == null -> true
+                    editing.id == null -> true
+                    else -> {
+                        val matchDb = runCatching {
+                            KlipperApp.getDatabaseOrNull()?.getInstances()?.firstOrNull { it.name == name }?.id
+                        }.getOrNull()
+                        matchDb != editing.id
+                    }
+                }
+            }
+            .distinct()
+        if (desired !in existing) {
+            val (dbNames2, slotNames2) = collectExistingNames()
+            val existing2 = (dbNames2 + slotNames2)
+                .filter { name ->
+                    when {
+                        editing == null -> true
+                        editing.id == null -> true
+                        else -> {
+                            val matchDb = runCatching {
+                                KlipperApp.getDatabaseOrNull()?.getInstances()?.firstOrNull { it.name == name }?.id
+                            }.getOrNull()
+                            matchDb != editing.id
+                        }
+                    }
+                }
+            if (desired !in existing2) return desired
+        }
+        val base = stripTrailingNumber(desired).ifEmpty { "Printer" }
+        for (n in 2..1000) {
+            val candidate = "$base $n"
+            val (dbNames2, slotNames2) = collectExistingNames()
+            val existing2 = (dbNames2 + slotNames2)
+                .filter { name ->
+                    when {
+                        editing == null -> true
+                        editing.id == null -> true
+                        else -> {
+                            val matchDb = runCatching {
+                                KlipperApp.getDatabaseOrNull()?.getInstances()?.firstOrNull { it.name == name }?.id
+                            }.getOrNull()
+                            matchDb != editing.id
+                        }
+                    }
+                }
+            if (candidate !in existing2) return candidate
+        }
+        return desired
+    }
 
     fun loadForCreate() {
         _editingInstance.value = null
@@ -36,6 +143,7 @@ class InstanceEditorViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 KlipperApp.bundleInstallJob.await()
             } catch (_: Throwable) {}
+            _defaultName.value = computeDefaultName()
             val files = runCatching {
                 File(KlipperApp.INSTANCE.filesDir, "klipper/config").listFiles()?.map { it.name }?.sorted()
             }.getOrNull() ?: emptyList()
@@ -46,6 +154,7 @@ class InstanceEditorViewModel(app: Application) : AndroidViewModel(app) {
 
     fun loadForEdit(instance: KlipperInstance) {
         _editingInstance.value = instance
+        _defaultName.value = instance.name
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 KlipperApp.bundleInstallJob.await()
@@ -64,8 +173,16 @@ class InstanceEditorViewModel(app: Application) : AndroidViewModel(app) {
 
     fun save(name: String, autostart: Boolean, onDone: () -> Unit) {
         val editing = _editingInstance.value
+        val finalizedName = run {
+            val trimmed = name.trim()
+            if (trimmed.isNotEmpty()) {
+                ensureUniqueName(trimmed, editing)
+            } else {
+                computeDefaultName()
+            }
+        }
         if (editing != null) {
-            editing.name = name
+            editing.name = finalizedName
             editing.autostart = autostart
             viewModelScope.launch(Dispatchers.IO) {
                 try {
@@ -89,7 +206,7 @@ class InstanceEditorViewModel(app: Application) : AndroidViewModel(app) {
 
         val inst = KlipperInstance().apply {
             id = UUID.randomUUID().toString()
-            this.name = name
+            this.name = finalizedName
             this.autostart = autostart
             this.icon = InstanceIcon.PRINTER
         }

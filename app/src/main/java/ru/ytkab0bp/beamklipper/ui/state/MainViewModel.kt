@@ -22,22 +22,28 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
 
     fun toggle(instance: KlipperInstance) {
-        val state = instance.getState()
-        if (state == KlipperInstance.State.STARTING || state == KlipperInstance.State.STOPPING) return
-        if (state == KlipperInstance.State.IDLE) {
-            if (!KlipperInstance.hasFreeSlots()) return
-            instance.start()
-        } else {
-            instance.stop()
-            if (instance.autostart) {
-                instance.autostart = false
-                KlipperApp.DATABASE.update(instance)
+        val id = instance.id ?: return
+        val canonical = KlipperInstance.getInstance(id) ?: return
+        val state = canonical.getState()
+        when (state) {
+            KlipperInstance.State.RUNNING, KlipperInstance.State.STARTING -> {
+                canonical.stop()
+                if (canonical.autostart) {
+                    canonical.autostart = false
+                    KlipperApp.DATABASE.update(canonical)
+                }
+            }
+            KlipperInstance.State.STOPPING, KlipperInstance.State.IDLE -> {
+                if (state == KlipperInstance.State.IDLE && !KlipperInstance.hasFreeSlots()) return
+                canonical.start()
             }
         }
     }
 
     fun runStopAll() {
-        val instances = instances.value
+        val instances = instances.value.mapNotNull { inst ->
+            inst.id?.let { id -> KlipperInstance.getInstance(id) }
+        }
         if (instances.isEmpty()) return
         val anyActive = instances.any {
             it.getState() == KlipperInstance.State.RUNNING ||
@@ -47,19 +53,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             for (inst in instances) {
                 val state = inst.getState()
                 if (state == KlipperInstance.State.RUNNING || state == KlipperInstance.State.STARTING) {
-                    if (state != KlipperInstance.State.STOPPING) {
-                        inst.stop()
-                        if (inst.autostart) {
-                            inst.autostart = false
-                            KlipperApp.DATABASE.update(inst)
-                        }
+                    inst.stop()
+                    if (inst.autostart) {
+                        inst.autostart = false
+                        KlipperApp.DATABASE.update(inst)
                     }
                 }
             }
         } else {
             for (inst in instances) {
-                if (inst.getState() == KlipperInstance.State.IDLE) {
-                    if (!KlipperInstance.hasFreeSlots()) return
+                val state = inst.getState()
+                if (state == KlipperInstance.State.IDLE || state == KlipperInstance.State.STOPPING) {
+                    if (state == KlipperInstance.State.IDLE && !KlipperInstance.hasFreeSlots()) return
                     inst.start()
                 }
             }
@@ -67,9 +72,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun delete(instance: KlipperInstance) {
-        instance.stop()
+        val id = instance.id ?: return
+        val canonical = KlipperInstance.getInstance(id) ?: return
+        canonical.stop()
         viewModelScope.launch(Dispatchers.IO) {
-            KlipperApp.DATABASE.delete(instance)
+            KlipperApp.DATABASE.delete(canonical)
         }
     }
 }

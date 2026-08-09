@@ -26,6 +26,10 @@
     <string name="Instances">Профили</string>
     <string name="InstanceStarting">Запуск…</string>
     <string name="InstanceStopping">Остановка…</string>
+    <string name="InstanceRunning">Работает</string>
+    <string name="InstanceIdle">Остановлен</string>
+    <string name="InstanceDefaultName">Принтер %d</string>
+    <string name="InstanceDefaultNameHint">например, Принтер 1</string>
     <string name="InstanceName">Имя</string>
     <string name="InstanceConfig">Конфиг</string>
     <string name="InstanceCreate">Создать</string>

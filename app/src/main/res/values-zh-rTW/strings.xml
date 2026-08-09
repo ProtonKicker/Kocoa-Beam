@@ -27,6 +27,10 @@
     <string name="Instances">設定檔</string>
     <string name="InstanceStarting">啟動中…</string>
     <string name="InstanceStopping">停止中…</string>
+    <string name="InstanceRunning">執行中</string>
+    <string name="InstanceIdle">閒置</string>
+    <string name="InstanceDefaultName">印表機 %d</string>
+    <string name="InstanceDefaultNameHint">例如：印表機 1</string>
     <string name="InstanceName">名稱</string>
     <string name="InstanceConfig">設定</string>
     <string name="InstanceCreate">建立</string>

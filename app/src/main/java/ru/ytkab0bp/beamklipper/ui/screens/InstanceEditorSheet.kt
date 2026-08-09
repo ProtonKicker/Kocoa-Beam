@@ -65,12 +65,27 @@ fun InstanceEditorSheet(
     val filesList by viewModel.filesList.collectAsState()
     val configFile by viewModel.configFile.collectAsState()
     val saving by viewModel.saving.collectAsState()
+    val defaultName by viewModel.defaultName.collectAsState()
     val context = LocalContext.current
 
-    var name by remember { mutableStateOf(TextFieldValue(editInstance?.name ?: "")) }
-    var autostart by remember { mutableStateOf(editInstance?.autostart ?: false) }
+    var name by remember(editInstance) {
+        mutableStateOf(
+            editInstance?.name?.let { TextFieldValue(it) } ?: TextFieldValue("")
+        )
+    }
+    var nameEdited by remember(editInstance) { mutableStateOf(false) }
+    var autostart by remember(editInstance) { mutableStateOf(editInstance?.autostart ?: false) }
     var showConfigPicker by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(editInstance, defaultName) {
+        if (editInstance != null) return@LaunchedEffect
+        if (nameEdited) return@LaunchedEffect
+        val preset = defaultName ?: return@LaunchedEffect
+        if (name.text.isEmpty()) {
+            name = TextFieldValue(preset)
+        }
+    }
 
     LaunchedEffect(editInstance) {
         if (editInstance == null) viewModel.loadForCreate() else viewModel.loadForEdit(editInstance)
@@ -130,7 +145,10 @@ fun InstanceEditorSheet(
                     Spacer(Modifier.height(8.dp))
                     BasicTextField(
                         value = name,
-                        onValueChange = { name = it },
+                        onValueChange = { v: TextFieldValue ->
+                            nameEdited = true
+                            name = v
+                        },
                         singleLine = true,
                         cursorBrush = SolidColor(Ink),
                         textStyle = MaterialTheme.typography.bodyLarge.copy(color = Ink),
@@ -144,7 +162,7 @@ fun InstanceEditorSheet(
                             ) {
                                 if (name.text.isEmpty()) {
                                     Text(
-                                        text = "e.g. Printer 1",
+                                        text = stringResource(R.string.InstanceDefaultNameHint),
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = InkMuted
                                     )
@@ -248,21 +266,12 @@ fun InstanceEditorSheet(
                         text = stringResource(if (editInstance == null) R.string.InstanceCreate else R.string.InstanceOK),
                         onClick = {
                             var nameStr = name.text.trim()
-                            if (nameStr.isEmpty()) {
-                                val currentInstances = KlipperApp.DATABASE.getInstances().map { it.name }
-                                var n = 1
-                                while (true) {
-                                    val candidate = "Printer $n"
-                                    if (!currentInstances.contains(candidate)) {
-                                        nameStr = candidate
-                                        break
-                                    }
-                                    n++
-                                }
-                            }
                             if (editInstance == null && configFile.isNullOrEmpty()) {
                                 error = context.getString(R.string.ErrorConfigEmpty)
                                 return@BrutalButton
+                            }
+                            if (nameStr.isEmpty() && editInstance == null) {
+                                nameStr = defaultName ?: context.getString(R.string.InstanceDefaultName, 1)
                             }
                             viewModel.save(nameStr, autostart) {
                                 onDismiss()

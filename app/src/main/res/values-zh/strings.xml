@@ -27,6 +27,10 @@
     <string name="Instances">配置</string>
     <string name="InstanceStarting">启动中…</string>
     <string name="InstanceStopping">停止中…</string>
+    <string name="InstanceRunning">运行中</string>
+    <string name="InstanceIdle">空闲</string>
+    <string name="InstanceDefaultName">打印机 %d</string>
+    <string name="InstanceDefaultNameHint">例如：打印机 1</string>
     <string name="InstanceName">名称</string>
     <string name="InstanceConfig">配置</string>
     <string name="InstanceCreate">创建</string>
