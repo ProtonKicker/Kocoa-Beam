@@ -49,7 +49,10 @@ import ru.ytkab0bp.beamklipper.utils.ViewUtils
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
+import java.io.OutputStream
+import java.io.RandomAccessFile
 import java.net.HttpURLConnection
+import java.net.Socket
 import java.net.SocketTimeoutException
 import java.net.URI
 import java.net.URL
@@ -122,8 +125,10 @@ class WebService : Service() {
     }
 
     private fun getMoonrakerPort(): Int {
+        var fallback: Int? = null
         for (inst in KlipperInstance.getInstances()) {
-            if (inst.getState() == KlipperInstance.State.RUNNING) {
+            val s = inst.getState()
+            if (s == KlipperInstance.State.RUNNING || s == KlipperInstance.State.STARTING) {
                 val cfg = File(inst.publicDirectory, "config/moonraker.conf")
                 if (cfg.exists()) {
                     try {
@@ -131,9 +136,23 @@ class WebService : Service() {
                         if (m != null) return m.groupValues[1].toInt()
                     } catch (_: Exception) {}
                 }
+                try {
+                    val raf1 = RandomAccessFile("/proc/net/tcp", "r")
+                    val raf2 = RandomAccessFile("/proc/net/tcp6", "r")
+                    val text1 = try { raf1.channel.map(java.nio.channels.FileChannel.MapMode.READ_ONLY, 0, raf1.channel.size()).let { buf -> val arr = ByteArray(buf.remaining()); buf.get(arr); String(arr, Charsets.US_ASCII) } } finally { raf1.close() }
+                    val text2 = try { raf2.channel.map(java.nio.channels.FileChannel.MapMode.READ_ONLY, 0, raf2.channel.size()).let { buf -> val arr = ByteArray(buf.remaining()); buf.get(arr); String(arr, Charsets.US_ASCII) } } finally { raf2.close() }
+                    val all = "$text1\n$text2"
+                    val re = Regex("^\\s*[0-9A-Fa-f]+:\\s*[0-9A-Fa-f]+:([0-9A-Fa-f]{4})\\s+[0-9A-Fa-f]+:[0-9A-Fa-f]+\\s+0A", RegexOption.MULTILINE)
+                    for (match in re.findAll(all)) {
+                        val p = match.groupValues[1].toInt(16)
+                        if (p in 7100..9000 && (fallback == null || p < fallback)) {
+                            fallback = p
+                        }
+                    }
+                } catch (_: Throwable) {}
             }
         }
-        return 7125
+        return fallback ?: 7125
     }
 
     private external fun generateTone(numSamples: Int, freq: Float): FloatArray
@@ -508,6 +527,23 @@ class WebService : Service() {
         private fun checkRemote(session: IHTTPSession): Boolean =
             "127.0.0.1" != session.remoteIpAddress
 
+        private fun pipeStream(src: InputStream, dst: OutputStream, bufSize: Int = 32768, timeoutMs: Long = 120_000L) {
+            val buf = ByteArray(bufSize)
+            val deadline = System.currentTimeMillis() + timeoutMs
+            while (true) {
+                val remaining = deadline - System.currentTimeMillis()
+                if (remaining <= 0L) break
+                val n = runCatching { src.read(buf, 0, minOf(bufSize, buf.size)) }.getOrElse { -1 }
+                if (n < 0) break
+                if (n == 0) {
+                    Thread.sleep(5L)
+                    continue
+                }
+                runCatching { dst.write(buf, 0, n); dst.flush() }
+                    .onFailure { return }
+            }
+        }
+
         override fun serve(session: IHTTPSession): Response {
             when (session.uri) {
                 "/beam/arduino_reset" -> {
@@ -571,34 +607,62 @@ class WebService : Service() {
 
             val m = API_PATTERN.matcher(session.uri)
             if (m.find()) {
+                var con: HttpURLConnection? = null
+                var socket: Socket? = null
                 try {
                     val qs = session.queryParameterString
                     val urlStr = "http://127.0.0.1:${getMoonrakerPort()}/${session.uri.substring(1)}" + if (qs.isNullOrEmpty()) "" else "?$qs"
-                    val con = URL(urlStr).openConnection() as HttpURLConnection
+                    con = (URL(urlStr).openConnection() as HttpURLConnection).apply {
+                        connectTimeout = 5_000
+                        readTimeout = 45_000
+                        instanceFollowRedirects = true
+                        useCaches = false
+                    }
+                    socket = runCatching {
+                        val f = HttpURLConnection::class.java.getDeclaredField("http").apply { isAccessible = true }
+                        val client = f.get(con) ?: return@runCatching null
+                        runCatching { client.javaClass.getDeclaredField("socket").apply { isAccessible = true }.get(client) as? Socket? }
+                            .getOrNull()
+                    }.getOrNull()
+                    socket?.tcpNoDelay = true
+                    socket?.soTimeout = 60_000
                     con.requestMethod = session.method.name
-                    if (session.method == Method.POST || session.method == Method.PUT || session.method == Method.PATCH) {
-                        for ((key, value) in session.headers) {
-                            con.addRequestProperty(key, value)
+                    for ((key, value) in session.headers) {
+                        when (key.lowercase()) {
+                            "host", "connection", "content-length", "transfer-encoding", "keep-alive", "proxy-connection" -> {}
+                            else -> con.addRequestProperty(key, value)
                         }
+                    }
+                    if (session.method == Method.POST || session.method == Method.PUT || session.method == Method.PATCH) {
                         con.doOutput = true
-                        session.inputStream.use { input ->
-                            con.outputStream.use { output ->
-                                input.copyTo(output)
+                        runCatching {
+                            session.inputStream.use { input ->
+                                con.outputStream.use { output ->
+                                    pipeStream(input, output, timeoutMs = 60_000L)
+                                }
                             }
                         }
                     }
-                    val responseStream = if (con.responseCode in 200..299) con.inputStream else con.errorStream
-                    val resStatus = Status.lookup(con.responseCode) 
+                    val responseCode = runCatching { con.responseCode }.getOrElse { (it as? IOException)?.let { _ -> HttpURLConnection.HTTP_INTERNAL_ERROR } ?: 500 }
+                    val responseStream = runCatching { if (responseCode in 200..299) con.inputStream else con.errorStream }.getOrNull()
+                    val resStatus = Status.lookup(responseCode)
                         ?: object : org.nanohttpd.protocols.http.response.IStatus {
                             override fun getDescription(): String = con.responseMessage ?: "Unknown"
-                            override fun getRequestStatus(): Int = con.responseCode
+                            override fun getRequestStatus(): Int = responseCode
                         }
-                    val r = Response.newChunkedResponse(resStatus, con.contentType, responseStream)
+                    if (responseStream == null) {
+                        return Response.newFixedLengthResponse(resStatus, "text/plain", "")
+                    }
+                    val contentLength = runCatching { con.contentLength }.getOrElse { -1 }
+                    val r = if (contentLength > 0) {
+                        Response.newFixedLengthResponse(resStatus, con.contentType, responseStream, contentLength.toLong())
+                    } else {
+                        Response.newChunkedResponse(resStatus, con.contentType, responseStream)
+                    }
                     for ((key, values) in con.headerFields) {
                         if (key.isNullOrEmpty()) continue
-                        if (key.equals("content-length", true)) continue
-                        if (key.equals("transfer-encoding", true)) continue
-                        if (key.equals("connection", true)) continue
+                        val lk = key.lowercase()
+                        if (lk == "content-length" || lk == "transfer-encoding" || lk == "connection" || lk == "keep-alive") continue
                         val headerValues = values ?: continue
                         for (value in headerValues) {
                             r.addHeader(key, value)
@@ -607,7 +671,13 @@ class WebService : Service() {
                     r.addHeader("Connection", "close")
                     return r
                 } catch (e: IOException) {
-                    throw RuntimeException(e)
+                    try { con?.disconnect() } catch (_: Exception) {}
+                    Log.w("WebService", "Proxy IOError on ${session.uri}", e)
+                    return Response.newFixedLengthResponse(Status.lookup(502) ?: Status.INTERNAL_ERROR, "text/plain", "Bad Gateway: ${e.message}")
+                } catch (t: Throwable) {
+                    try { con?.disconnect() } catch (_: Exception) {}
+                    Log.e("WebService", "Proxy error on ${session.uri}", t)
+                    return Response.newFixedLengthResponse(Status.INTERNAL_ERROR, "text/plain", "Server Error: ${t.message}")
                 }
             }
 
@@ -625,64 +695,74 @@ class WebService : Service() {
                 val uriStr = "ws://127.0.0.1:${getMoonrakerPort()}/websocket" + if (qs.isNullOrEmpty()) "" else "?$qs"
                 
                 val remoteClient = object : WebSocketClient(URI(uriStr)) {
+                    private var pendingMsg = false
+                    init {
+                        isTcpNoDelay = true
+                        connectionLostTimeout = 120
+                    }
                     override fun onOpen(handshakedata: ServerHandshake) {}
                     override fun onMessage(message: String) {
                         val local = localRef.get()
                         if (local != null && local.isOpen) {
                             try { local.send(message) } catch (e: IOException) { onError(e) }
                         } else {
-                            Log.e("websocket_proxy", "remoteClient.onMessage(String): local=$local isOpen=${local?.isOpen}. message=$message. Closing remote!")
-                            close()
+                            Log.w("websocket_proxy", "remoteClient.onMessage(String): local=$local isOpen=${local?.isOpen}, dropping 1 message")
+                            if (!isClosing && !isClosed) runCatching { close(1000, "local_closed") }
                         }
                     }
                     override fun onMessage(bytes: ByteBuffer) {
                         val local = localRef.get()
                         if (local != null && local.isOpen) {
-                            try { local.send(bytes.array()) } catch (e: IOException) { onError(e) }
+                            try {
+                                val arr = ByteArray(bytes.remaining()).also { bytes.get(it) }
+                                local.send(arr)
+                            } catch (e: IOException) { onError(e) }
                         } else {
-                            Log.e("websocket_proxy", "remoteClient.onMessage(bytes): local=$local isOpen=${local?.isOpen}. Closing remote!")
-                            close()
+                            Log.w("websocket_proxy", "remoteClient.onMessage(bytes): local=$local isOpen=${local?.isOpen}, dropping")
+                            if (!isClosing && !isClosed) runCatching { close(1000, "local_closed") }
                         }
                     }
                     override fun onClose(code: Int, reason: String, remote: Boolean) {
                         Log.d("websocket_proxy", "remoteClient.onClose: code=$code reason=$reason remote=$remote")
                         val local = localRef.get()
                         if (local != null && local.isOpen) {
-                            try { local.close(CloseCode.NormalClosure, reason ?: "", false) } catch (e: IOException) {}
+                            runCatching { local.close(CloseCode.NormalClosure, reason ?: "", false) }
                         }
                     }
                     override fun onError(ex: Exception) {
+                        if (ex is SocketTimeoutException) return
                         Log.e("websocket_proxy", "Remote socket error", ex)
                         val local = localRef.get()
                         if (local != null && local.isOpen) {
-                            try { local.close(CloseCode.InternalServerError, ex.message ?: "Error", false) } catch (e: IOException) {}
+                            runCatching { local.close(CloseCode.InternalServerError, ex.message ?: "Error", false) }
                         }
                     }
                 }
                 val local = object : WebSocket(handshake) {
                     override fun onOpen() {
                         Log.d("websocket_proxy", "Local socket opened, connecting to remote...")
-                        try { 
-                            if (!remoteClient.connectBlocking()) {
+                        try {
+                            val connected = remoteClient.connectBlocking(10, java.util.concurrent.TimeUnit.SECONDS)
+                            if (!connected) {
                                 Log.e("websocket_proxy", "remoteClient.connectBlocking() returned false")
-                                close(CloseCode.InternalServerError, "Failed to connect to Moonraker", false)
-                            } else {
-                                Log.d("websocket_proxy", "Connected to remote Moonraker!")
+                                runCatching { close(CloseCode.InternalServerError, "Failed to connect to Moonraker", false) }
+                                return
                             }
-                        } catch (e: InterruptedException) { 
+                            Log.d("websocket_proxy", "Connected to remote Moonraker!")
+                        } catch (e: InterruptedException) {
                             Log.e("websocket_proxy", "Interrupted during connectBlocking", e)
-                            try { close(CloseCode.InternalServerError, "Interrupted", false) } catch (ex: IOException) {}
+                            runCatching { close(CloseCode.InternalServerError, "Interrupted", false) }
                         }
                     }
                     override fun onClose(code: CloseCode, reason: String, initiatedByRemote: Boolean) {
                         Log.d("websocket_proxy", "local.onClose: code=$code reason=$reason initiatedByRemote=$initiatedByRemote")
                         if (remoteClient.isOpen) {
-                            remoteClient.close()
+                            runCatching { remoteClient.close(1000, reason ?: "local_closed") }
                         }
                     }
                     override fun onMessage(message: WebSocketFrame) {
                         if (!remoteClient.isOpen) {
-                            try { close(CloseCode.NormalClosure, "", false) } catch (e: IOException) {}
+                            runCatching { close(CloseCode.NormalClosure, "", false) }
                             return
                         }
                         if (message.opCode == OpCode.Text) {
@@ -696,13 +776,14 @@ class WebService : Service() {
                         if (exception is SocketTimeoutException) return
                         Log.e("websocket_proxy", "Local socket error", exception)
                         if (remoteClient.isOpen) {
-                            remoteClient.close()
+                            runCatching { remoteClient.close(1011, "local_error") }
                         }
                     }
                 }
                 localRef.set(local)
                 local
             } catch (e: Exception) {
+                Log.e("websocket_proxy", "Failed to open websocket", e)
                 null
             }
         }

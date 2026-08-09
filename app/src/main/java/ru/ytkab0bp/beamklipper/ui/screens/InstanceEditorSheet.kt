@@ -162,19 +162,25 @@ fun InstanceEditorSheet(
                             color = InkMuted
                         )
                         Spacer(Modifier.height(8.dp))
+                        val filesReady = filesList.isNotEmpty()
+                        val filesLoading = configFile == null && !filesReady
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(Paper, RectangleShape)
                                 .border(2.dp, Ink, RectangleShape)
-                                .clickable { if (filesList.isNotEmpty()) showConfigPicker = true }
+                                .clickable { if (filesReady) showConfigPicker = true }
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = configFile ?: stringResource(R.string.InstanceConfigHint),
+                                    text = when {
+                                        configFile != null -> configFile!!
+                                        filesLoading -> "⏳ ${stringResource(R.string.InstanceConfigLoading)}"
+                                        else -> stringResource(R.string.InstanceConfigHint)
+                                    },
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = if (configFile != null) Ink else InkMuted,
                                     modifier = Modifier.weight(1f)

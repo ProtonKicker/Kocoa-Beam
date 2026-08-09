@@ -19,6 +19,7 @@ import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CaptureRequest
 import android.media.Image
 import android.media.ImageReader
+import android.net.wifi.WifiManager
 import android.os.Binder
 import android.os.Build
 import android.os.Handler
@@ -72,6 +73,8 @@ class CameraService : Service() {
     private var captureSession: CameraCaptureSession? = null
     private var captureRequestBuilder: CaptureRequest.Builder? = null
     private var wakeLock: PowerManager.WakeLock? = null
+    private var wifiLock: WifiManager.WifiLock? = null
+    private val stoppedByUser = java.util.concurrent.atomic.AtomicBoolean(false)
 
     private val serviceBinder = object : Binder() {
         override fun getInterfaceDescriptor(): String = DESCRIPTOR
@@ -110,6 +113,7 @@ class CameraService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? {
+        acquireLocks()
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val not = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
             Notification.Builder(this, KlipperApp.SERVICES_CHANNEL)
@@ -128,13 +132,55 @@ class CameraService : Service() {
         return serviceBinder
     }
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_REDELIVER_INTENT
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        if (stoppedByUser.get()) return
+    }
+
+    private fun acquireLocks() {
+        try {
+            if (wakeLock?.isHeld != true) {
+                val powerManager = getSystemService(POWER_SERVICE) as PowerManager
+                wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "BeamKlipper::CameraWakeLock").apply {
+                    setReferenceCounted(false)
+                    acquire(10 * 24 * 60 * 60 * 1000L)
+                }
+            }
+        } catch (t: Throwable) {
+            Log.e(TAG, "Failed to acquire wakelock", t)
+        }
+        try {
+            if (wifiLock?.isHeld != true) {
+                val wm = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+                wifiLock = wm.createWifiLock(
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) WifiManager.WIFI_MODE_FULL_LOW_LATENCY else WifiManager.WIFI_MODE_FULL,
+                    "BeamKlipper::CameraWiFiLock"
+                ).apply {
+                    setReferenceCounted(false)
+                    acquire()
+                }
+            }
+        } catch (t: Throwable) {
+            Log.e(TAG, "Failed to acquire wifilock", t)
+        }
+    }
+
+    private fun releaseLocks() {
+        try {
+            if (wakeLock?.isHeld == true) wakeLock?.release()
+        } catch (_: Throwable) {}
+        wakeLock = null
+        try {
+            if (wifiLock?.isHeld == true) wifiLock?.release()
+        } catch (_: Throwable) {}
+        wifiLock = null
+    }
+
     @SuppressLint("UnspecifiedRegisterReceiverFlag", "WakelockTimeout")
     override fun onCreate() {
         super.onCreate()
-
-        val powerManager = getSystemService(POWER_SERVICE) as PowerManager
-        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "BeamKlipper::CameraWakeLock")
-        wakeLock?.acquire()
+        acquireLocks()
 
         cameraThread = HandlerThread("camera").also { it.start() }
         cameraHandler = Handler(cameraThread!!.looper)
@@ -297,6 +343,7 @@ class CameraService : Service() {
     }
 
     override fun onDestroy() {
+        stoppedByUser.set(true)
         super.onDestroy()
         captureSession?.close()
         captureSession = null
@@ -308,7 +355,7 @@ class CameraService : Service() {
         stopForeground(true)
         notificationManager?.cancel(ID)
         unregisterReceiver(receiver)
-        wakeLock?.release()
+        releaseLocks()
         android.os.Process.killProcess(android.os.Process.myPid())
     }
 

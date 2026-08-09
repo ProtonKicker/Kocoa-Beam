@@ -31,8 +31,14 @@ class KlipperApp : MultiDexApplication() {
         super.onCreate()
         INSTANCE = this
         Prefs.init(this)
-        DATABASE = BeamDB(this)
         EventBus.registerImpl(this)
+
+        val isMainProcess = getProcessNameCompat() == packageName
+
+        if (isMainProcess) {
+            DATABASE = BeamDB(this)
+        }
+
         if (Prefs.appLanguage != Prefs.LANGUAGE_SYSTEM) {
             Prefs.applyAppLanguage()
         }
@@ -56,16 +62,9 @@ class KlipperApp : MultiDexApplication() {
             nm.createNotificationChannel(watchdog)
         }
 
-        val isMainProcess = getProcessNameCompat() == packageName
-
-        bundleInstallJob = appScope.async(Dispatchers.IO) {
-            BundleInstaller.init(this@KlipperApp)
-        }
-
         if (isMainProcess) {
             appScope.launch {
-                bundleInstallJob.await()
-                Log.i("beam_app", "BundleInstaller done, loading instances from DB")
+                Log.i("beam_app", "Loading instances from DB (bundle install deferred until START press)")
                 KlipperInstance.resetSlotsForFreshStart()
                 val instances = withContext(Dispatchers.IO) {
                     DATABASE.getInstances()
@@ -92,6 +91,19 @@ class KlipperApp : MultiDexApplication() {
     }
 
     companion object {
+        @JvmStatic
+        internal fun getProcessNameCompatInternal(): String {
+            if (Build.VERSION.SDK_INT >= 28) return Application.getProcessName()
+            return try {
+                val activityThread = Class.forName("android.app.ActivityThread")
+                val method = activityThread.getDeclaredMethod("currentProcessName")
+                method.invoke(null) as String
+            } catch (_: ReflectiveOperationException) {
+                try { File("/proc/self/cmdline").readBytes().takeWhile { it != 0.toByte() }.toByteArray().toString(Charsets.UTF_8) }
+                catch (_: Throwable) { "" }
+            }
+        }
+
         private const val CHAQUOPY_SEED_MARKER = ".chaquopy_seed_v1"
         private const val CHAQUOPY_LOCK_NAME = ".chaquopy_lock"
         private const val MOONRAKER_LOCK_NAME = ".moonraker_port_lock"
@@ -110,19 +122,35 @@ class KlipperApp : MultiDexApplication() {
             }
         }
 
+        private fun isProcessAlive(pid: Int): Boolean {
+            return try {
+                val f = File("/proc/$pid/cmdline")
+                f.exists() && f.readBytes().isNotEmpty()
+            } catch (_: Throwable) {
+                false
+            }
+        }
+
         fun withMoonrakerPortLock(ctx: Context, action: () -> Unit) {
             val lockFile = File(ctx.filesDir, MOONRAKER_LOCK_NAME)
             val deadline = System.currentTimeMillis() + 15_000
             var acquired = false
-            while (System.currentTimeMillis() < deadline) {
+            while (System.currentTimeMillis() < deadline && !acquired) {
                 try {
                     if (lockFile.createNewFile()) {
+                        lockFile.writeText("${android.os.Process.myPid()}")
                         acquired = true
                         break
                     }
                 } catch (_: Throwable) {}
                 try {
-                    if (System.currentTimeMillis() - lockFile.lastModified() > 10_000) {
+                    val content = try { lockFile.readText().trim() } catch (_: Throwable) { "" }
+                    val lastMod = lockFile.lastModified()
+                    val staleByTime = System.currentTimeMillis() - lastMod > 10_000
+                    val staleByPid = if (content.isNotEmpty() && content.all(Char::isDigit)) {
+                        try { !isProcessAlive(content.toInt()) } catch (_: Throwable) { true }
+                    } else staleByTime
+                    if (staleByTime || staleByPid) {
                         lockFile.delete()
                     }
                 } catch (_: Throwable) {}
@@ -130,7 +158,12 @@ class KlipperApp : MultiDexApplication() {
             }
             if (!acquired) {
                 try { lockFile.delete() } catch (_: Throwable) {}
-                try { acquired = lockFile.createNewFile() } catch (_: Throwable) {}
+                try {
+                    if (lockFile.createNewFile()) {
+                        lockFile.writeText("${android.os.Process.myPid()}")
+                        acquired = true
+                    }
+                } catch (_: Throwable) {}
             }
             try {
                 action()
@@ -178,10 +211,33 @@ class KlipperApp : MultiDexApplication() {
         @JvmField
         val appScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-        lateinit var bundleInstallJob: Deferred<Unit>
+        private val bundleInstallLock = Any()
+        @Volatile
+        private var _bundleInstallJob: Deferred<Unit>? = null
+        val bundleInstallJob: Deferred<Unit>
+            get() = _bundleInstallJob ?: synchronized(bundleInstallLock) {
+                _bundleInstallJob ?: appScope.async(Dispatchers.IO) {
+                    BundleInstaller.init(INSTANCE)
+                }.also { _bundleInstallJob = it }
+            }
 
         lateinit var INSTANCE: KlipperApp
-        lateinit var DATABASE: BeamDB
+        @Volatile
+        private var _DATABASE: BeamDB? = null
+        var DATABASE: BeamDB
+            get() = _DATABASE
+                ?: synchronized(this) {
+                    _DATABASE
+                        ?: run {
+                            val app = INSTANCE
+                            if (getProcessNameCompatInternal() != app.packageName) {
+                                throw IllegalStateException("DATABASE accessed in child process ${getProcessNameCompatInternal()}; not allowed — use instance.id")
+                            }
+                            BeamDB(app).also { _DATABASE = it }
+                        }
+                }
+            set(v) { _DATABASE = v }
+        fun getDatabaseOrNull(): BeamDB? = _DATABASE
         @JvmField
         var EVENT_BUS: EventBus = EventBus.newBus("main")
         @JvmField

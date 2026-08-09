@@ -32,15 +32,30 @@ class InstanceEditorViewModel(app: Application) : AndroidViewModel(app) {
 
     fun loadForCreate() {
         _editingInstance.value = null
-        val files = File(KlipperApp.INSTANCE.filesDir, "klipper/config").listFiles()?.map { it.name }?.sorted() ?: emptyList()
-        _filesList.value = files
-        _configFile.value = files.firstOrNull { it.lowercase().contains("example") } ?: files.firstOrNull()
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                KlipperApp.bundleInstallJob.await()
+            } catch (_: Throwable) {}
+            val files = runCatching {
+                File(KlipperApp.INSTANCE.filesDir, "klipper/config").listFiles()?.map { it.name }?.sorted()
+            }.getOrNull() ?: emptyList()
+            _filesList.value = files
+            _configFile.value = files.firstOrNull { it.lowercase().contains("example") } ?: files.firstOrNull()
+        }
     }
 
     fun loadForEdit(instance: KlipperInstance) {
         _editingInstance.value = instance
-        _filesList.value = emptyList()
-        _configFile.value = null
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                KlipperApp.bundleInstallJob.await()
+            } catch (_: Throwable) {}
+            val files = runCatching {
+                File(KlipperApp.INSTANCE.filesDir, "klipper/config").listFiles()?.map { it.name }?.sorted()
+            }.getOrNull() ?: emptyList()
+            _filesList.value = files
+            _configFile.value = files.firstOrNull { it.lowercase().contains("example") } ?: files.firstOrNull()
+        }
     }
 
     fun selectConfig(file: String) {
@@ -53,6 +68,9 @@ class InstanceEditorViewModel(app: Application) : AndroidViewModel(app) {
             editing.name = name
             editing.autostart = autostart
             viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    KlipperApp.bundleInstallJob.await()
+                } catch (_: Throwable) {}
                 KlipperApp.DATABASE.update(editing)
                 onDone()
             }
@@ -80,6 +98,9 @@ class InstanceEditorViewModel(app: Application) : AndroidViewModel(app) {
         _saving.value = true
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                try {
+                    KlipperApp.bundleInstallJob.await()
+                } catch (_: Throwable) {}
                 cfg.parentFile?.mkdirs()
                 try {
                     FileInputStream(File(KlipperApp.INSTANCE.filesDir, "klipper/config/$cfgText")).use { fis ->

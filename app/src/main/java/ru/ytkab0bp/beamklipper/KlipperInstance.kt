@@ -479,17 +479,23 @@ class KlipperInstance {
                 }
             }
             if (inst == null) {
-                val db = try { KlipperApp.DATABASE } catch (_: Throwable) { return null }
-                val all = try { db.getInstances() } catch (_: Throwable) { return null }
-                for (i in all) {
-                    if (id == i.id) {
-                        inst = i
-                        instanceMap[id] = i
-                        if (instances.isEmpty()) {
-                            instances = all
+                val db = try { KlipperApp.getDatabaseOrNull() } catch (_: Throwable) { null }
+                if (db != null) {
+                    val all = try { db.getInstances() } catch (_: Throwable) { return null }
+                    for (i in all) {
+                        if (id == i.id) {
+                            inst = i
+                            instanceMap[id] = i
+                            if (instances.isEmpty()) {
+                                instances = all
+                            }
+                            break
                         }
-                        break
                     }
+                }
+                if (inst == null) {
+                    inst = KlipperInstance().apply { this.id = id }
+                    instanceMap[id] = inst
                 }
             }
             return inst
@@ -498,8 +504,8 @@ class KlipperInstance {
         @JvmStatic
         fun getInstances(): List<KlipperInstance> {
             if (instances.isEmpty()) {
-                try { KlipperApp.DATABASE } catch (_: Throwable) { return emptyList() } ?: return emptyList()
-                val loaded = try { KlipperApp.DATABASE.getInstances() } catch (_: Throwable) { emptyList() }
+                val db = try { KlipperApp.getDatabaseOrNull() } catch (_: Throwable) { null } ?: return emptyList()
+                val loaded = try { db.getInstances() } catch (_: Throwable) { emptyList() }
                 if (loaded.isNotEmpty()) {
                     instances = loaded
                 }

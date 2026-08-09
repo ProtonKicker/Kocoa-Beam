@@ -6,6 +6,7 @@
     <string name="KlippyDescription">Klippy 正在背景執行…</string>
     <string name="MoonrakerTitle">Moonraker（%s）</string>
     <string name="MoonrakerDescription">Moonraker 正在背景執行…</string>
+    <string name="MoonrakerStartFailed">連接埠綁定失敗，請重新啟動該實例</string>
     <string name="WebTitle">Web 伺服器</string>
     <string name="WebDescription">Web 伺服器正在背景執行…</string>
     <string name="CameraTitle">相機伺服器</string>
@@ -30,6 +31,7 @@
     <string name="InstanceConfig">設定</string>
     <string name="InstanceCreate">建立</string>
     <string name="InstanceConfigHint">點擊選擇設定檔…</string>
+    <string name="InstanceConfigLoading">正在準備設定檔，請稍候…</string>
     <string name="InstanceDelete">刪除「%s」？</string>
     <string name="InstanceDeleteConfirm">您確定嗎？</string>
     <string name="InstanceOK">確定</string>

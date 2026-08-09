@@ -1,13 +1,17 @@
 package ru.ytkab0bp.beamklipper.service
 
 import android.app.Notification
+import android.content.Context
 import android.content.Intent
+import android.net.wifi.WifiManager
 import android.os.Build
 import android.content.pm.ServiceInfo
 import android.os.IBinder
+import android.os.PowerManager
 import android.util.Log
 import ru.ytkab0bp.beamklipper.BundleInstaller
 import ru.ytkab0bp.beamklipper.KlipperApp
+import ru.ytkab0bp.beamklipper.KlipperInstance
 import ru.ytkab0bp.beamklipper.R
 import ru.ytkab0bp.beamklipper.utils.Prefs
 import java.io.ByteArrayOutputStream
@@ -15,6 +19,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.regex.Pattern
 
 open class BaseKlippyService(private val num: Int) : BasePythonService() {
@@ -22,8 +27,13 @@ open class BaseKlippyService(private val num: Int) : BasePythonService() {
         const val BASE_ID = 100000
     }
 
+    private var wakeLock: PowerManager.WakeLock? = null
+    private var wifiLock: WifiManager.WifiLock? = null
+    private val stoppedByUser = AtomicBoolean(false)
+
     override fun onBind(intent: Intent?): IBinder? {
         val b = super.onBind(intent) ?: return null
+        acquireLocks()
         val inst = instance
         if (inst != null) {
             val not = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
@@ -44,7 +54,66 @@ open class BaseKlippyService(private val num: Int) : BasePythonService() {
         return b
     }
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent != null) {
+            val id = intent.getStringExtra(BasePythonService.KEY_INSTANCE)
+            if (id != null && instance == null) {
+                val inst = KlipperInstance.getInstance(id)
+                val field = BasePythonService::class.java.getDeclaredField("instance")
+                field.isAccessible = true
+                try { field.set(this, inst) } catch (_: Throwable) {}
+                acquireLocks()
+            }
+        }
+        return START_REDELIVER_INTENT
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        if (stoppedByUser.get()) return
+    }
+
+    private fun acquireLocks() {
+        try {
+            if (wakeLock == null) {
+                val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+                wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "BeamKlipper::KlippyWakeLock::$num").apply {
+                    setReferenceCounted(false)
+                    acquire(10 * 24 * 60 * 60 * 1000L)
+                }
+            }
+        } catch (t: Throwable) {
+            Log.e("klippy_$num", "Failed to acquire wakelock", t)
+        }
+        try {
+            if (wifiLock == null) {
+                val wm = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+                wifiLock = wm.createWifiLock(
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) WifiManager.WIFI_MODE_FULL_LOW_LATENCY else WifiManager.WIFI_MODE_FULL,
+                    "BeamKlipper::KlippyWiFiLock::$num"
+                ).apply {
+                    setReferenceCounted(false)
+                    acquire()
+                }
+            }
+        } catch (t: Throwable) {
+            Log.e("klippy_$num", "Failed to acquire wifilock", t)
+        }
+    }
+
+    private fun releaseLocks() {
+        try {
+            if (wakeLock?.isHeld == true) wakeLock?.release()
+        } catch (_: Throwable) {}
+        wakeLock = null
+        try {
+            if (wifiLock?.isHeld == true) wifiLock?.release()
+        } catch (_: Throwable) {}
+        wifiLock = null
+    }
+
     override fun onDestroy() {
+        stoppedByUser.set(true)
+        releaseLocks()
         super.onDestroy()
         stopForeground(true)
         notificationManager.cancel(BASE_ID + num)

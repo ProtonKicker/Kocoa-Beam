@@ -14,6 +14,11 @@ import ru.ytkab0bp.beamklipper.events.InstancesRefreshedEvent
 import java.io.File
 
 class BeamDB(context: Context?) : SQLiteOpenHelper(context, DB_NAME, null, VERSION) {
+    override fun onConfigure(db: SQLiteDatabase) {
+        db.enableWriteAheadLogging()
+        db.setForeignKeyConstraintsEnabled(true)
+    }
+
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
             "CREATE TABLE IF NOT EXISTS $TABLE_INSTANCES ($COLUMN_ID TEXT PRIMARY KEY ON CONFLICT REPLACE, $COLUMN_NAME TEXT, $COLUMN_ICON TEXT, $COLUMN_AUTOSTART INTEGER)"

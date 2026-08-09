@@ -7,6 +7,7 @@
     <string name="KlippyDescription">Klippy is running in background…</string>
     <string name="MoonrakerTitle">Moonraker (%s)</string>
     <string name="MoonrakerDescription">Moonraker is running in background…</string>
+    <string name="MoonrakerStartFailed">Failed to bind to port — please restart the instance</string>
     <string name="WebTitle">Web server</string>
     <string name="WebDescription">Web server is running in background…</string>
     <string name="CameraTitle">Camera server</string>
@@ -31,6 +32,7 @@
     <string name="InstanceConfig">Config</string>
     <string name="InstanceCreate">Create</string>
     <string name="InstanceConfigHint">Tap to select a config file…</string>
+    <string name="InstanceConfigLoading">Preparing configs, please wait…</string>
     <string name="InstanceDelete">Delete «%s»?</string>
     <string name="InstanceDeleteConfirm">Are you sure?</string>
     <string name="InstanceOK">OK</string>

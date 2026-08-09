@@ -153,13 +153,12 @@ object UsbSerialManager {
         nativePort.setProxy { data ->
             try {
                 port.write(data, 0)
-                port.dtr = false
-                port.rts = false
                 if (DEBUG) {
                     Log.d(TAG, "Write ${data.contentToString()}")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to write to USB serial", e)
+                close(uid)
             }
         }
         val thread = ReadThread(uid, port, nativePort)
@@ -196,7 +195,7 @@ object UsbSerialManager {
         private val port: UsbSerialPort,
         private val nativePort: NativeSerialPort
     ) : Thread() {
-        private val buffer = ByteArray(4096)
+        private val buffer = ByteArray(16384)
 
         init {
             android.os.Process.setThreadPriority(-20)
