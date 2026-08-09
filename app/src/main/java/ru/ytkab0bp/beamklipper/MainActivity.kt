@@ -14,7 +14,6 @@ import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import com.hoho.android.usbserial.driver.UsbSerialProber
 import ru.ytkab0bp.beamklipper.serial.KlipperProbeTable
@@ -30,7 +29,6 @@ class MainActivity : AppCompatActivity() {
 
     @android.annotation.SuppressLint("BatteryLife", "InlinedApi")
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
         val uiModeManager = getSystemService(UI_MODE_SERVICE) as UiModeManager

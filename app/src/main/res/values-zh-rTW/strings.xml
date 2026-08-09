@@ -84,7 +84,7 @@
     <string name="CreditsTitle">致謝</string>
     <string name="CreditsText">Kocoa Beam 是 Beam Klipper 的深度主題化 Kotlin 硬分叉，原版由 utkabobr 創作。沒有他的工作就不會有這個應用。</string>
     <string name="AppSettings">應用設定</string>
-    <string name="EngineFrontend">引擎與介面</string>
+    <string name="EngineFrontend">韌體與介面</string>
     <string name="QuickStart">快速入門</string>
     <string name="PrivacyNote">所有作業都在裝置上完成。您的資料不會離開手機。</string>
     <string name="SelectIcon">選擇圖示</string>
