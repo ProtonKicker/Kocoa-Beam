@@ -89,18 +89,6 @@
         <service android:name=".service.MoonrakerService_2" android:exported="false" android:process=":moonraker_2" android:foregroundServiceType="connectedDevice"/>
         <service android:name=".service.KlippyService_3" android:exported="false" android:process=":klippy_3" android:foregroundServiceType="connectedDevice"/>
         <service android:name=".service.MoonrakerService_3" android:exported="false" android:process=":moonraker_3" android:foregroundServiceType="connectedDevice"/>
-        <service android:name=".service.KlippyService_4" android:exported="false" android:process=":klippy_4" android:foregroundServiceType="connectedDevice"/>
-        <service android:name=".service.MoonrakerService_4" android:exported="false" android:process=":moonraker_4" android:foregroundServiceType="connectedDevice"/>
-        <service android:name=".service.KlippyService_5" android:exported="false" android:process=":klippy_5" android:foregroundServiceType="connectedDevice"/>
-        <service android:name=".service.MoonrakerService_5" android:exported="false" android:process=":moonraker_5" android:foregroundServiceType="connectedDevice"/>
-        <service android:name=".service.KlippyService_6" android:exported="false" android:process=":klippy_6" android:foregroundServiceType="connectedDevice"/>
-        <service android:name=".service.MoonrakerService_6" android:exported="false" android:process=":moonraker_6" android:foregroundServiceType="connectedDevice"/>
-        <service android:name=".service.KlippyService_7" android:exported="false" android:process=":klippy_7" android:foregroundServiceType="connectedDevice"/>
-        <service android:name=".service.MoonrakerService_7" android:exported="false" android:process=":moonraker_7" android:foregroundServiceType="connectedDevice"/>
-        <service android:name=".service.KlippyService_8" android:exported="false" android:process=":klippy_8" android:foregroundServiceType="connectedDevice"/>
-        <service android:name=".service.MoonrakerService_8" android:exported="false" android:process=":moonraker_8" android:foregroundServiceType="connectedDevice"/>
-        <service android:name=".service.KlippyService_9" android:exported="false" android:process=":klippy_9" android:foregroundServiceType="connectedDevice"/>
-        <service android:name=".service.MoonrakerService_9" android:exported="false" android:process=":moonraker_9" android:foregroundServiceType="connectedDevice"/>
 
 
         <provider

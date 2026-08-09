@@ -16,6 +16,12 @@
     <string name="HideNotificationsChannelInfo">您需要停用「%s」頻道</string>
     <string name="NotOnSdcard">應用未因安裝在 SD 卡上而損壞</string>
     <string name="NotOnSdcardInfo">應用無法在 SD 卡上運作</string>
+    <string name="IgnoreBatteryOptimization">忽略電池最佳化（Doze）</string>
+    <string name="WatchdogChannel" translatable="false">Watchdog</string>
+    <string name="WatchdogChannelDesc">服務崩潰恢復通知</string>
+    <string name="WatchdogCrashTitle">%s 服務已崩潰</string>
+    <string name="WatchdogCrashRestarting">%s 服務已崩潰，正在重啟（第 %1$d / %2$d 次嘗試）…</string>
+    <string name="WatchdogCrashGaveUp">%s 服務已崩潰 %d 次，為避免資源抖動已停止。</string>
     <string name="Next">下一步</string>
     <string name="Instances">設定檔</string>
     <string name="InstanceStarting">啟動中…</string>

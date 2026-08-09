@@ -43,6 +43,8 @@ android {
         versionCode 11
         versionName "v0"
 
+        buildConfigField "int", "SLOTS_COUNT", "4"
+
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         python {

@@ -17,6 +17,12 @@
     <string name="HideNotificationsChannelInfo">You need to disable «%s» channel</string>
     <string name="NotOnSdcard">App is not broken by installing on SD Card</string>
     <string name="NotOnSdcardInfo">App can\'t work on SD Card</string>
+    <string name="IgnoreBatteryOptimization">Ignore battery optimization (Doze)</string>
+    <string name="WatchdogChannel" translatable="false">Watchdog</string>
+    <string name="WatchdogChannelDesc">Crashed service recovery notifications</string>
+    <string name="WatchdogCrashTitle">%s service crashed</string>
+    <string name="WatchdogCrashRestarting">%s service crashed, restarting (attempt %1$d of %2$d)…</string>
+    <string name="WatchdogCrashGaveUp">%s service crashed %d times, stopping to avoid thrashing.</string>
     <string name="Next">Next</string>
     <string name="Instances">Profiles</string>
     <string name="InstanceStarting">Starting…</string>

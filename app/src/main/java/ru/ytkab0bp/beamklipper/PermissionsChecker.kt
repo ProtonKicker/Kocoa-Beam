@@ -4,6 +4,7 @@ import android.app.ActivityManager
 import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
+import android.os.PowerManager
 import androidx.core.content.ContextCompat
 
 object PermissionsChecker {
@@ -41,6 +42,18 @@ object PermissionsChecker {
     }
 
     @JvmStatic
+    fun hasBatteryOptimizationIgnored(): Boolean {
+        return if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            true
+        } else try {
+            val pm = KlipperApp.INSTANCE.getSystemService(Context.POWER_SERVICE) as PowerManager
+            pm.isIgnoringBatteryOptimizations(KlipperApp.INSTANCE.packageName)
+        } catch (_: Throwable) {
+            true
+        }
+    }
+
+    @JvmStatic
     fun isNotBrokenBySDCard(): Boolean {
         val pm = KlipperApp.INSTANCE.packageManager
         return try {
@@ -53,6 +66,6 @@ object PermissionsChecker {
 
     @JvmStatic
     fun needBlockStart(): Boolean {
-        return !hasNotificationPerm() || !hasBatteryPerm() || !isNotBrokenBySDCard() || !isNotificationsChannelHidden()
+        return !hasNotificationPerm() || !hasBatteryPerm() || !hasBatteryOptimizationIgnored() || !isNotBrokenBySDCard() || !isNotificationsChannelHidden()
     }
 }

@@ -16,6 +16,12 @@
     <string name="HideNotificationsChannelInfo">您需要禁用“%s”渠道</string>
     <string name="NotOnSdcard">应用未因安装在 SD 卡上而损坏</string>
     <string name="NotOnSdcardInfo">应用无法在 SD 卡上运行</string>
+    <string name="IgnoreBatteryOptimization">忽略电池优化（Doze）</string>
+    <string name="WatchdogChannel" translatable="false">Watchdog</string>
+    <string name="WatchdogChannelDesc">服务崩溃恢复通知</string>
+    <string name="WatchdogCrashTitle">%s 服务已崩溃</string>
+    <string name="WatchdogCrashRestarting">%s 服务已崩溃，正在重启（第 %1$d / %2$d 次尝试）…</string>
+    <string name="WatchdogCrashGaveUp">%s 服务已崩溃 %d 次，为避免资源抖动已停止。</string>
     <string name="Next">下一步</string>
     <string name="Instances">配置</string>
     <string name="InstanceStarting">启动中…</string>

@@ -16,6 +16,12 @@
     <string name="HideNotificationsChannelInfo">Вам нужно отключить канал «%s»</string>
     <string name="NotOnSdcard">Приложение не сломано установкой на SD Карту</string>
     <string name="NotOnSdcardInfo">Приложение не может работать на SD Карте</string>
+    <string name="IgnoreBatteryOptimization">Игнорировать оптимизацию батареи (Doze)</string>
+    <string name="WatchdogChannel" translatable="false">Watchdog</string>
+    <string name="WatchdogChannelDesc">Уведомления о восстановлении сервисов после падения</string>
+    <string name="WatchdogCrashTitle">Сервис %s упал</string>
+    <string name="WatchdogCrashRestarting">Сервис %s упал, перезапуск (попытка %1$d из %2$d)…</string>
+    <string name="WatchdogCrashGaveUp">Сервис %s упал %d раз, останавливаем, чтобы не перегружать систему.</string>
     <string name="Next">Дальше</string>
     <string name="Instances">Профили</string>
     <string name="InstanceStarting">Запуск…</string>

@@ -7,6 +7,8 @@ import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
 import android.util.Log
+import com.chaquo.python.Python
+import com.chaquo.python.android.AndroidPlatform
 import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile
@@ -18,14 +20,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import ru.ytkab0bp.beamklipper.db.BeamDB
 import ru.ytkab0bp.beamklipper.serial.UsbSerialManager
 import ru.ytkab0bp.beamklipper.utils.Prefs
 import ru.ytkab0bp.eventbus.EventBus
-import com.chaquo.python.Python
-import com.chaquo.python.android.AndroidPlatform
 
 class KlipperApp : MultiDexApplication() {
     override fun onCreate() {
@@ -45,20 +44,22 @@ class KlipperApp : MultiDexApplication() {
             false
         }
 
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             nm.createNotificationChannel(
                 NotificationChannel(SERVICES_CHANNEL, getString(R.string.ServicesChannel), NotificationManager.IMPORTANCE_LOW))
+            val watchdog = NotificationChannel(WATCHDOG_CHANNEL, getString(R.string.WatchdogChannel), NotificationManager.IMPORTANCE_HIGH)
+            watchdog.description = getString(R.string.WatchdogChannelDesc)
+            watchdog.enableLights(true)
+            watchdog.enableVibration(true)
+            watchdog.setShowBadge(true)
+            nm.createNotificationChannel(watchdog)
         }
 
         val isMainProcess = getProcessNameCompat() == packageName
 
         bundleInstallJob = appScope.async(Dispatchers.IO) {
             BundleInstaller.init(this@KlipperApp)
-        }
-
-        if (!isMainProcess) {
-            runBlocking { bundleInstallJob.await() }
         }
 
         if (isMainProcess) {
@@ -172,7 +173,8 @@ class KlipperApp : MultiDexApplication() {
             get() = INSTANCE.packageName + ".permission.INTERNAL_BROADCASTS"
         @JvmField
         val SERVICES_CHANNEL = "services"
-
+        @JvmField
+        val WATCHDOG_CHANNEL = "watchdog"
         @JvmField
         val appScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 

@@ -57,6 +57,7 @@ import ru.ytkab0bp.beamklipper.ui.theme.Paper
 fun PermissionScreen(onNext: () -> Unit) {
     val context = LocalContext.current
     var batteryChecked by remember { mutableStateOf(PermissionsChecker.hasBatteryPerm()) }
+    var dozeChecked by remember { mutableStateOf(PermissionsChecker.hasBatteryOptimizationIgnored()) }
     var notificationsChecked by remember { mutableStateOf(PermissionsChecker.hasNotificationPerm()) }
     var hideChannelChecked by remember { mutableStateOf(PermissionsChecker.isNotificationsChannelHidden()) }
     var sdcardChecked by remember { mutableStateOf(PermissionsChecker.isNotBrokenBySDCard()) }
@@ -66,6 +67,7 @@ fun PermissionScreen(onNext: () -> Unit) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 batteryChecked = PermissionsChecker.hasBatteryPerm()
+                dozeChecked = PermissionsChecker.hasBatteryOptimizationIgnored()
                 notificationsChecked = PermissionsChecker.hasNotificationPerm()
                 hideChannelChecked = PermissionsChecker.isNotificationsChannelHidden()
                 sdcardChecked = PermissionsChecker.isNotBrokenBySDCard()
@@ -110,6 +112,28 @@ fun PermissionScreen(onNext: () -> Unit) {
                             .padding(horizontal = 24.dp, vertical = 12.dp)
                     )
 
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        PermissionRow(
+                            title = stringResource(R.string.IgnoreBatteryOptimization),
+                            checked = dozeChecked,
+                            onRowClick = {
+                                if (!dozeChecked) {
+                                    try {
+                                        val pkg = context.packageName
+                                        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                                            .setData(Uri.parse("package:$pkg"))
+                                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        context.startActivity(intent)
+                                    } catch (t: Throwable) {
+                                        context.startActivity(
+                                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
+                                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        )
+                                    }
+                                }
+                            }
+                        )
+                    }
                     PermissionRow(
                         title = stringResource(R.string.BatteryOptimizationExclusion),
                         checked = batteryChecked,
@@ -117,6 +141,7 @@ fun PermissionScreen(onNext: () -> Unit) {
                             if (!batteryChecked) {
                                 context.startActivity(
                                     Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                 )
                             }
                         }
@@ -163,6 +188,7 @@ fun PermissionScreen(onNext: () -> Unit) {
                             onRowClick = {
                                 context.startActivity(
                                     Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).setData(Uri.parse("package:${KlipperApp.INSTANCE.packageName}"))
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                 )
                                 Toast.makeText(context, R.string.NotOnSdcardInfo, Toast.LENGTH_SHORT).show()
                             }

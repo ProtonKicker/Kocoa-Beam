@@ -1,20 +1,25 @@
 package ru.ytkab0bp.beamklipper
 
+import android.app.Notification
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
+import androidx.core.app.NotificationCompat
 import ru.ytkab0bp.beamklipper.events.InstanceStateChangedEvent
 import ru.ytkab0bp.beamklipper.events.InstancesRefreshedEvent
 import ru.ytkab0bp.beamklipper.events.WebStateChangedEvent
 import ru.ytkab0bp.beamklipper.service.*
 import ru.ytkab0bp.beamklipper.utils.Prefs
 import java.io.File
+import kotlin.math.max
 
 class KlipperInstance {
     @JvmField
@@ -34,6 +39,10 @@ class KlipperInstance {
     private var moonrakerConnection: ServiceConnection? = null
     private var moonrakerConnected = false
     private var slot = 0
+    private var lastRunning = 0L
+    private var watchdogCount = 0
+    private var isUserStop = false
+    private var wasPrinting = false
 
     fun getState(): State = state
 
@@ -45,6 +54,8 @@ class KlipperInstance {
 
     fun start() {
         if (state != State.IDLE) return
+        isUserStop = false
+        watchdogCount = 0
         notifyStateChanged(State.STARTING)
 
         if (!directory.exists() && !directory.mkdirs()) {
@@ -98,13 +109,20 @@ class KlipperInstance {
                 val b1 = KlipperApp.INSTANCE.bindService(kIntent, object : ServiceConnection {
                     override fun onServiceConnected(name: ComponentName, service: IBinder) {
                         Log.i("beam_service", "klippy connected!"); klippyConnected = true
+                        watchdogCount = 0
                         if (moonrakerConnected) {
                             notifyStateChanged(State.RUNNING)
                         }
                     }
 
                     override fun onServiceDisconnected(name: ComponentName) {
-                        onKlippyUnbound()
+                        Log.w("beam_service", "klippy onServiceDisconnected for id=$instId")
+                        onKlippyUnbound(watchdogRestart = true)
+                    }
+
+                    override fun onBindingDied(name: ComponentName) {
+                        Log.w("beam_service", "klippy onBindingDied for id=$instId")
+                        onKlippyUnbound(watchdogRestart = true)
                     }
                 }.also { klippyConnection = it }, Context.BIND_AUTO_CREATE); Log.i("beam_service", "bind klippy: $b1")
             } catch (e: ClassNotFoundException) {
@@ -123,7 +141,13 @@ class KlipperInstance {
                     }
 
                     override fun onServiceDisconnected(name: ComponentName) {
-                        onMoonrakerUnbound()
+                        Log.w("beam_service", "moonraker onServiceDisconnected for id=$instId")
+                        onMoonrakerUnbound(watchdogRestart = true)
+                    }
+
+                    override fun onBindingDied(name: ComponentName) {
+                        Log.w("beam_service", "moonraker onBindingDied for id=$instId")
+                        onMoonrakerUnbound(watchdogRestart = true)
                     }
                 }.also { moonrakerConnection = it }, Context.BIND_AUTO_CREATE)
             } catch (e: ClassNotFoundException) {
@@ -135,6 +159,8 @@ class KlipperInstance {
     fun stop() {
         if (state != State.RUNNING && state != State.STARTING) return
         Log.d(TAG, "stop() called for instance id=$id name=$name, currentState=$state")
+        isUserStop = true
+        watchdogCount = 0
         notifyStateChanged(State.STOPPING)
 
         mainHandler.post {
@@ -157,30 +183,169 @@ class KlipperInstance {
             moonrakerConnection = null
             klippyIntent = null
             moonrakerIntent = null
+            try { nm.cancel(WATCHDOG_BASE_ID + slot) } catch (_: Throwable) {}
             if (state == State.STOPPING) {
                 notifyStateChanged(State.IDLE)
             }
         }
     }
 
-    private fun onKlippyUnbound() {
-        klippyConnection = null
-        klippyConnected = false
-        if (!moonrakerConnected) {
-            notifyStateChanged(State.IDLE)
+    private fun fireWatchdogNotification(serviceName: String, attempt: Int, isRestarting: Boolean) {
+        try {
+            val ctx = KlipperApp.INSTANCE
+            val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val mainIntent = Intent(ctx, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+            val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            } else {
+                PendingIntent.FLAG_UPDATE_CURRENT
+            }
+            val pi = PendingIntent.getActivity(ctx, WATCHDOG_REQ_ID + slot, mainIntent, flags)
+            val title = ctx.getString(R.string.WatchdogCrashTitle, name)
+            val text = if (isRestarting) {
+                ctx.getString(R.string.WatchdogCrashRestarting, serviceName, attempt, WATCHDOG_MAX_RETRIES)
+            } else {
+                ctx.getString(R.string.WatchdogCrashGaveUp, serviceName, WATCHDOG_MAX_RETRIES)
+            }
+            val notif = NotificationCompat.Builder(ctx, KlipperApp.WATCHDOG_CHANNEL)
+                .setSmallIcon(R.drawable.icon_static)
+                .setContentTitle(title)
+                .setContentText(text)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+                .setPriority(if (isRestarting) NotificationCompat.PRIORITY_HIGH else NotificationCompat.PRIORITY_MAX)
+                .setCategory(NotificationCompat.CATEGORY_ERROR)
+                .setDefaults(Notification.DEFAULT_VIBRATE or Notification.DEFAULT_SOUND or Notification.DEFAULT_LIGHTS)
+                .setOngoing(!isRestarting)
+                .setAutoCancel(isRestarting)
+                .setColor(0xFFD4A017.toInt())
+                .setContentIntent(pi)
+                .build()
+            nm.notify(WATCHDOG_BASE_ID + slot, notif)
+        } catch (t: Throwable) {
+            Log.e(TAG, "Failed to fire watchdog notification", t)
         }
     }
 
-    private fun onMoonrakerUnbound() {
+    private fun tryWatchdogRestart(whichService: String) {
+        if (isUserStop) {
+            Log.i(TAG, "tryWatchdogRestart suppressed: user initiated stop for id=$id")
+            return
+        }
+        val currentState = state
+        if (currentState != State.RUNNING && currentState != State.STARTING) {
+            Log.i(TAG, "tryWatchdogRestart suppressed: state=$currentState for id=$id")
+            return
+        }
+        val wasShort = (System.currentTimeMillis() - lastRunning) < WATCHDOG_MIN_RUN_MS && watchdogCount > 0
+        watchdogCount++
+        val shouldRestart = watchdogCount <= WATCHDOG_MAX_RETRIES && !wasShort
+        Log.w(TAG, "tryWatchdogRestart: id=$id which=$whichService count=$watchdogCount max=$WATCHDOG_MAX_RETRIES lastRunDelta=${System.currentTimeMillis() - lastRunning}ms wasShort=$wasShort shouldRestart=$shouldRestart")
+        if (wasShort) {
+            Log.w(TAG, "watchdog: service kept dying too fast (looped death), giving up to avoid thrashing")
+        }
+        fireWatchdogNotification(whichService, watchdogCount, shouldRestart)
+
+        if (!shouldRestart) {
+            stop()
+            return
+        }
+        notifyStateChanged(State.STARTING)
+
+        try {
+            val nm = KlipperApp.INSTANCE.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            if (klippyConnection != null) {
+                try { KlipperApp.INSTANCE.unbindService(klippyConnection!!) } catch (_: Throwable) {}
+                try { KlipperApp.INSTANCE.stopService(klippyIntent) } catch (_: Throwable) {}
+                try { nm.cancel(BaseKlippyService.BASE_ID + slot) } catch (_: Throwable) {}
+            }
+            if (moonrakerConnection != null) {
+                try { KlipperApp.INSTANCE.unbindService(moonrakerConnection!!) } catch (_: Throwable) {}
+                try { KlipperApp.INSTANCE.stopService(moonrakerIntent) } catch (_: Throwable) {}
+                try { nm.cancel(BaseMoonrakerService.BASE_ID + slot) } catch (_: Throwable) {}
+            }
+        } catch (_: Throwable) {}
+        klippyConnected = false
+        moonrakerConnected = false
+        klippyConnection = null
+        moonrakerConnection = null
+        klippyIntent = null
+        moonrakerIntent = null
+
+        val delayMs = max(500L + watchdogCount * 1200L, WATCHDOG_RESTART_DELAY_MS)
+        val instId = id
+        val capturedSlot = slot
+        val capturedKlippyClass = try { Class.forName("ru.ytkab0bp.beamklipper.service.KlippyService_$capturedSlot") } catch (_: Throwable) { null }
+        val capturedMoonrakerClass = try { Class.forName("ru.ytkab0bp.beamklipper.service.MoonrakerService_$capturedSlot") } catch (_: Throwable) { null }
+        mainHandler.postDelayed({
+            if (isUserStop) return@postDelayed
+            Log.i(TAG, "watchdog: restarting services for id=$instId (attempt $watchdogCount)")
+            try {
+                if (capturedKlippyClass != null) {
+                    val kIntent = Intent(KlipperApp.INSTANCE, capturedKlippyClass)
+                    klippyIntent = kIntent
+                    kIntent.putExtra(BasePythonService.KEY_INSTANCE, instId)
+                    KlipperApp.INSTANCE.bindService(kIntent, object : ServiceConnection {
+                        override fun onServiceConnected(name: ComponentName, service: IBinder) {
+                            Log.i("beam_service", "watchdog klippy reconnected for id=$instId")
+                            klippyConnected = true
+                            watchdogCount = max(0, watchdogCount - 1)
+                            if (moonrakerConnected) {
+                                notifyStateChanged(State.RUNNING)
+                            }
+                        }
+                        override fun onServiceDisconnected(name: ComponentName) { onKlippyUnbound(watchdogRestart = true) }
+                        override fun onBindingDied(name: ComponentName) { onKlippyUnbound(watchdogRestart = true) }
+                    }.also { klippyConnection = it }, Context.BIND_AUTO_CREATE)
+                }
+                if (capturedMoonrakerClass != null) {
+                    val mIntent = Intent(KlipperApp.INSTANCE, capturedMoonrakerClass)
+                    moonrakerIntent = mIntent
+                    mIntent.putExtra(BasePythonService.KEY_INSTANCE, instId)
+                    KlipperApp.INSTANCE.bindService(mIntent, object : ServiceConnection {
+                        override fun onServiceConnected(name: ComponentName, service: IBinder) {
+                            Log.i("beam_service", "watchdog moonraker reconnected for id=$instId")
+                            moonrakerConnected = true
+                            if (klippyConnected) {
+                                notifyStateChanged(State.RUNNING)
+                            }
+                        }
+                        override fun onServiceDisconnected(name: ComponentName) { onMoonrakerUnbound(watchdogRestart = true) }
+                        override fun onBindingDied(name: ComponentName) { onMoonrakerUnbound(watchdogRestart = true) }
+                    }.also { moonrakerConnection = it }, Context.BIND_AUTO_CREATE)
+                }
+            } catch (t: Throwable) {
+                Log.e(TAG, "watchdog restart failed for id=$instId", t)
+            }
+        }, delayMs)
+    }
+
+    private fun onKlippyUnbound(watchdogRestart: Boolean = false) {
+        klippyConnection = null
+        klippyConnected = false
+        if (!moonrakerConnected) {
+            if (watchdogRestart) tryWatchdogRestart("Klippy")
+            if (!watchdogRestart || watchdogCount > WATCHDOG_MAX_RETRIES) notifyStateChanged(State.IDLE)
+        } else if (watchdogRestart) {
+            tryWatchdogRestart("Klippy")
+        }
+    }
+
+    private fun onMoonrakerUnbound(watchdogRestart: Boolean = false) {
         moonrakerConnection = null
         moonrakerConnected = false
         if (!klippyConnected) {
-            notifyStateChanged(State.IDLE)
+            if (watchdogRestart) tryWatchdogRestart("Moonraker")
+            if (!watchdogRestart || watchdogCount > WATCHDOG_MAX_RETRIES) notifyStateChanged(State.IDLE)
+        } else if (watchdogRestart) {
+            tryWatchdogRestart("Moonraker")
         }
     }
 
     private fun notifyStateChanged(state: State) {
         Log.d(TAG, "notifyStateChanged: id=$id name=$name state=$state")
+        if (state == State.RUNNING) lastRunning = System.currentTimeMillis()
         this.state = state
         KlipperApp.EVENT_BUS.fireEvent(InstanceStateChangedEvent(requireNotNull(id), state))
 
@@ -191,6 +356,10 @@ class KlipperInstance {
                     slots.remove(entry)
                 }
             }
+            try {
+                val nm = KlipperApp.INSTANCE.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                nm.cancel(WATCHDOG_BASE_ID + slot)
+            } catch (_: Throwable) {}
             mainHandler.post { stopServerServicesIfNoSlots() }
         } else if (state == State.RUNNING) {
             mainHandler.post {
@@ -222,8 +391,15 @@ class KlipperInstance {
     }
 
     companion object {
-        const val SLOTS_COUNT = 10
+        @JvmField
+        val SLOTS_COUNT: Int = BuildConfig.SLOTS_COUNT
         private const val TAG = "beam_instance"
+
+        private const val WATCHDOG_BASE_ID = 9000
+        private const val WATCHDOG_REQ_ID = 9000
+        private const val WATCHDOG_MAX_RETRIES = 3
+        private const val WATCHDOG_MIN_RUN_MS = 8000L
+        private const val WATCHDOG_RESTART_DELAY_MS = 1500L
 
         private val mainHandler = Handler(Looper.getMainLooper())
         private val slots = HashMap<KlipperInstance, Int>()
