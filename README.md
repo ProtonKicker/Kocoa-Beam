@@ -1,12 +1,18 @@
-# Kream - Klipper for Android
+# Kocoa Beam - Klipper for Android
 
 **Read this in other languages: [English](README.md) · [简体中文](README.zh-Hans.md) · [繁體中文](README.zh-Hant.md)**
 
-Kream is a Kotlin rewrite of [Beam Klipper](https://github.com/utkabobr/BeamKlipper), originally created by [ProtonKicker](https://github.com/ProtonKicker). Kream allows you to run [Klipper](https://github.com/KevinOConnor/klipper) or [Kalico](https://github.com/KalicoDTU/kalico) host software on any Android 5.0+ device with OTG support.
+## What's in a Name?
 
-## Why Kream?
+**Kocoa Beam** is named after cocoa beans — the smooth, rich foundation of chocolate. Like cocoa beans transformed into something warm and delightful, Kocoa Beam takes the raw energy of [Beam Klipper](https://github.com/utkabobr/BeamKlipper) and refines it into a softer, sweeter experience.
 
-Kream is a complete overhaul of Beam Klipper with three major improvements:
+The "K" honors our Kotlin roots and Klipper heritage. The "Beam" pays tribute to the original [Beam Klipper](https://github.com/utkabobr/BeamKlipper) by [ProtonKicker](https://github.com/ProtonKicker). Together, it's a name that's as warm and approachable as a cup of hot cocoa.
+
+Kocoa Beam allows you to run [Klipper](https://github.com/KevinOConnor/klipper) or [Kalico](https://github.com/KalicoDTU/kalico) host software on any Android 5.0+ device with OTG support.
+
+## Why Kocoa Beam?
+
+Kocoa Beam is a complete overhaul of Beam Klipper with three major improvements:
 
 ### 1. Kotlin Rewrite
 The entire application has been migrated from Java to Kotlin, bringing:
@@ -16,17 +22,17 @@ The entire application has been migrated from Java to Kotlin, bringing:
 - **Smart casts & exhaustiveness checks** — bugs caught at compile time, not runtime
 
 ### 2. Dramatically Smaller Size
-Kream is significantly smaller than the original Beam Klipper (138 MB → ~36 MB):
+Kocoa Beam is significantly smaller than the original Beam Klipper (138 MB → ~36 MB):
 
-| Component | Beam Klipper | Kream |
-|-----------|-------------|-------|
+| Component | Beam Klipper | Kocoa Beam |
+|-----------|-------------|------------|
 | FFmpeg timelapse | Bundled binary (~40 MB) | Android MediaCodec API (built-in) |
 | App size (arm64) | ~138 MB | ~36 MB |
 
 The FFmpeg timelapse component was replaced with Android's native MediaCodec API, saving ~40 MB per architecture.
 
 ### 3. Brand New UI
-Kream features a complete UI redesign with:
+Kocoa Beam features a complete UI redesign with:
 - Brutalist bento-box aesthetic with "Paper/Honey/Ink" color palette
 - Hard offset shadows and bold borders
 - Modern Jetpack Compose implementation
@@ -40,12 +46,12 @@ Kream features a complete UI redesign with:
 
 ## Choosing the Right Package
 
-Kream provides two APK variants:
+Kocoa Beam provides two APK variants:
 
 | Architecture | Package Name | Use Case |
 |-------------|--------------|----------|
-| arm64 | `Cream_*_arm64.apk` | Modern 64-bit devices (recommended) |
-| armv7 | `Cream_*_armv7.apk` | Older 32-bit devices |
+| arm64 | `KocoaBeam_*_arm64.apk` | Modern 64-bit devices (recommended) |
+| armv7 | `KocoaBeam_*_armv7.apk` | Older 32-bit devices |
 
 **How to check your device architecture:**
 - **Settings > About Phone > Architecture** or **Kernel Architecture**
@@ -63,11 +69,11 @@ Kream provides two APK variants:
 7. Configure serial port from "Devices" tab in web editor (1.0.1+ configures automatically if you use single printer setup)
 8. You're awesome!
 
-# Can I use device as regular after I install Kream to it?
+# Can I use device as regular after I install Kocoa Beam to it?
 
 **Yes!** You definitely can!
 
-Kream does not do **anything** to your Android system, it runs in user-space as a regular Android app
+Kocoa Beam does not do **anything** to your Android system, it runs in user-space as a regular Android app
 
 # What's IP:port?
 
@@ -83,7 +89,7 @@ Recommended camera config is mjpeg-**stream** (Not adaptive mjpeg) for Fluidd an
 
 # What's inside?
 
-Kream bundles:
+Kocoa Beam bundles:
 - [Klipper](https://github.com/KevinOConnor/klipper)
 - [Kalico](https://github.com/KalicoDTU/kalico)
 - [Moonraker](https://github.com/Arksine/moonraker)
@@ -95,11 +101,11 @@ Kream bundles:
 
 # Android Extensions
 
-Kream provides additional extensions to control some built-in features.
+Kocoa Beam provides additional extensions to control some built-in features.
 
 ### Camera
 
-Include `[kream_camera]` into your printer.cfg
+Include `[kocoa_camera]` into your printer.cfg
 
 `SET_CAMERA_FLASHLIGHT ENABLED=true/false` - Toggles flashlight
 
@@ -107,7 +113,7 @@ Include `[kream_camera]` into your printer.cfg
 
 ### Beeper
 
-Include `[include kream_beeper.cfg]` into your printer.cfg
+Include `[include kocoa_beeper.cfg]` into your printer.cfg
 
 Use `M300` macro [as defined in docs](https://marlinfw.org/docs/gcode/M300.html)
 
@@ -124,7 +130,7 @@ You can circumvent this by setting app as default launcher and allowing all the 
 
 # Android TV Support?
 
-Yup. Should be working just fine. But please note that some cheap TV boxes does not support setting Kream as launcher without disabling system one first, use ADB or root to disable it.
+Yup. Should be working just fine. But please note that some cheap TV boxes does not support setting Kocoa Beam as launcher without disabling system one first, use ADB or root to disable it.
 
 # What USB Hub to Use?
 

@@ -70,13 +70,13 @@
     <string name="ChangelogNext">下一步</string>
     <string name="ChangelogOK">確定</string>
 
-    <string name="About">關於 Beam Klipper</string>
-    <string name="IntroTitle">使用方式</string>
-    <string name="IntroText">Beam Klipper 將您的 Android 手機變成一個獨立的 Klipper 或 Kalico 3D 列印機控制單元。\n\n1. 點擊「+」建立印表機設定檔並選擇 Klipper 設定範本。\n2. 點擊奶油色的執行按鈕以啟動引擎、Moonraker 和 Web UI 伺服器。\n3. 透過 Web 卡片開啟 Fluidd 或 Mainsail 來控制您的印表機。\n4. 使用設定面板切換引擎（Klipper/Kalico）和前端介面。\n\n所有處理都在您的裝置本機進行——無需雲端。</string>
+    <string name="About">關於 Kocoa Beam</string>
+    <string name="IntroTitle">什麼是 Kocoa Beam？</string>
+    <string name="IntroText">Kocoa Beam 是 Beam Klipper 的 Kotlin 重寫版，擁有全新的介面和更小的體積（138 MB → 36 MB）。\n\n主要特點：\n• Kotlin — 空安全、無洩漏協程\n• 10 個並發執行個體（對比 4 個）\n• 原生 Android 延時攝影（無需 FFmpeg）\n• 支援 Klipper 和 Kalico 韌體\n• 採用紙/蜜/墨配色的野獸主義 UI\n\n使用方法：\n1. 點擊「+」建立印表機設定檔。\n2. 點擊執行按鈕啟動引擎。\n3. 開啟 Fluidd 或 Mainsail 控制印表機。\n4. 使用設定切換引擎和前端介面。\n\n所有處理都在裝置本機進行。</string>
     <string name="GitHubRepo">GitHub 儲存庫</string>
     <string name="OriginalBeamKlipper">原作：utkabobr 的 Beam Klipper</string>
     <string name="CreditsTitle">致謝</string>
-    <string name="CreditsText">Kream 是 Beam Klipper 的深度主題化 Kotlin 硬分叉，原版由 utkabobr 創作。沒有他的工作就不會有這個應用。</string>
+    <string name="CreditsText">Kocoa Beam 是 Beam Klipper 的深度主題化 Kotlin 硬分叉，原版由 utkabobr 創作。沒有他的工作就不會有這個應用。</string>
     <string name="AppSettings">應用設定</string>
     <string name="EngineFrontend">引擎與介面</string>
     <string name="QuickStart">快速入門</string>

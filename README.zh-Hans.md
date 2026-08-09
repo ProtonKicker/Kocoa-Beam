@@ -1,10 +1,16 @@
-# Kream - Android 上的 Klipper / Kalico
+# Kocoa Beam - Android 上的 Klipper / Kalico
 
-Kream 是 [Beam Klipper](https://github.com/utkabobr/BeamKlipper) 的 Kotlin 重写版，最初由 [ProtonKicker](https://github.com/ProtonKicker) 创建。Kream 可以让你在任何支持 OTG 的 Android 5.0+ 设备上运行 [Klipper](https://github.com/KevinOConnor/klipper) 或 [Kalico](https://github.com/KalicoDTU/kalico) 主机软件（Klippy）。
+## 名字的由来
 
-## 为什么选择 Kream？
+**Kocoa Beam** 的名字来源于可可豆——巧克力顺滑、浓郁的核心原料。正如可可豆被加工成温暖美味的巧克力一样，Kocoa Beam 也将 [Beam Klipper](https://github.com/utkabobr/BeamKlipper) 的原始能量提炼成更柔和、更甜美的体验。
 
-Kream 是 Beam Klipper 的全面升级，包含三大改进：
+"K" 代表 Kotlin 与 Klipper 的传承。"Beam" 则致敬原始的 [Beam Klipper](https://github.com/utkabobr/BeamKlipper)（由 [ProtonKicker](https://github.com/ProtonKicker) 创建）。两者结合，是一个如同热可可一般温暖亲切的名字。
+
+Kocoa Beam 可以让你在任何支持 OTG 的 Android 5.0+ 设备上运行 [Klipper](https://github.com/KevinOConnor/klipper) 或 [Kalico](https://github.com/KalicoDTU/kalico) 主机软件（Klippy）。
+
+## 为什么选择 Kocoa Beam？
+
+Kocoa Beam 是 Beam Klipper 的全面升级，包含三大改进：
 
 ### 1. Kotlin 重写
 整个应用已从 Java 迁移到 Kotlin，带来：
@@ -14,17 +20,17 @@ Kream 是 Beam Klipper 的全面升级，包含三大改进：
 - **智能转换和穷举检查** — Bug 在编译时捕获，而非运行时
 
 ### 2. 体积大幅减小
-Kream 比原始 Beam Klipper 小很多（138 MB → 约 36 MB）：
+Kocoa Beam 比原始 Beam Klipper 小很多（138 MB → 约 36 MB）：
 
-| 组件 | Beam Klipper | Kream |
-|------|-------------|-------|
+| 组件 | Beam Klipper | Kocoa Beam |
+|------|-------------|------------|
 | FFmpeg 延时摄影 | 捆绑二进制文件（约 40 MB） | Android MediaCodec API（内置） |
 | 应用大小（arm64） | 约 138 MB | 约 36 MB |
 
 FFmpeg 延时摄影组件已被 Android 原生 MediaCodec API 取代，每个架构节省约 40 MB。
 
 ### 3. 全新的 UI
-Kream 具有完全的 UI 重新设计：
+Kocoa Beam 具有完全的 UI 重新设计：
 - 粗野主义 Bento 风格，「纸/蜜/墨」配色
 - 硬质偏移阴影和粗边框
 - 现代 Jetpack Compose 实现
@@ -38,12 +44,12 @@ Kream 具有完全的 UI 重新设计：
 
 ## 选择正确的安装包
 
-Kream 提供两个 APK 版本：
+Kocoa Beam 提供两个 APK 版本：
 
 | 架构 | 包名称 | 适用场景 |
 |------|--------|----------|
-| arm64 | `Cream_*_arm64.apk` | 现代 64 位设备（推荐） |
-| armv7 | `Cream_*_armv7.apk` | 旧式 32 位设备 |
+| arm64 | `KocoaBeam_*_arm64.apk` | 现代 64 位设备（推荐） |
+| armv7 | `KocoaBeam_*_armv7.apk` | 旧式 32 位设备 |
 
 **如何检查设备架构：**
 - 前往「设置」>「关于手机」>「架构」或「内核架构」
@@ -61,11 +67,11 @@ Kream 提供两个 APK 版本：
 7. 在 Web 编辑器的「设备」标签页中配置串口（单打印机设置下会自动配置）
 8. 大功告成！
 
-# 安装 Kream 之后，设备还能当普通设备用吗？
+# 安装 Kocoa Beam 之后，设备还能当普通设备用吗？
 
 **当然可以！**
 
-Kream 不会对 Android 系统做任何改动，它以普通 Android 应用的形式运行在用户空间。
+Kocoa Beam 不会对 Android 系统做任何改动，它以普通 Android 应用的形式运行在用户空间。
 
 # IP:端口是什么？
 
@@ -81,7 +87,7 @@ Fluidd 推荐使用 mjpeg-**stream**（非 adaptive mjpeg）摄像头配置，Ma
 
 # 内置了什么？
 
-Kream 内置了：
+Kocoa Beam 内置了：
 - [Klipper](https://github.com/KevinOConnor/klipper)
 - [Kalico](https://github.com/KalicoDTU/kalico)
 - [Moonraker](https://github.com/Arksine/moonraker)
@@ -91,13 +97,13 @@ Kream 内置了：
 - [Klipper TMC Autotune](https://github.com/andrewmcgr/klipper_tmc_autotune)
 - [Moonraker-timelapse](https://github.com/mainsail-crew/moonraker-timelapse)
 
-# Android 扩展
+# Android 扩展功能
 
-Kream 提供了一些附加扩展，用于控制内置功能。
+Kocoa Beam 提供了一些附加扩展功能，用于控制内置功能。
 
 ### 摄像头
 
-在 printer.cfg 中加入 `[kream_camera]`
+在 printer.cfg 中加入 `[kocoa_camera]`
 
 `SET_CAMERA_FLASHLIGHT ENABLED=true/false` - 开关闪光灯
 
@@ -105,7 +111,7 @@ Kream 提供了一些附加扩展，用于控制内置功能。
 
 ### 蜂鸣器
 
-在 printer.cfg 中加入 `[include kream_beeper.cfg]`
+在 printer.cfg 中加入 `[include kocoa_beeper.cfg]`
 
 使用[文档中定义](https://marlinfw.org/docs/gcode/M300.html)的 `M300` 宏。
 
@@ -122,7 +128,7 @@ Kream 提供了一些附加扩展，用于控制内置功能。
 
 # 支持 Android TV 吗？
 
-支持，应该可以正常工作。但请注意，部分廉价电视盒子不支持直接将 Kream 设为桌面，需要先用 ADB 或 root 禁用系统桌面。
+支持，应该可以正常工作。但请注意，部分廉价电视盒子不支持直接将 Kocoa Beam 设为桌面，需要先用 ADB 或 root 禁用系统桌面。
 
 # 用哪种 USB 集线器？
 

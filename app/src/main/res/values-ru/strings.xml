@@ -72,13 +72,13 @@
     <string name="ChangelogNext">Далее</string>
     <string name="ChangelogOK">ОК</string>
 
-    <string name="About">О Beam Klipper</string>
-    <string name="IntroTitle">Как пользоваться</string>
-    <string name="IntroText">Beam Klipper превращает ваш Android-телефон в автономный блок управления 3D-принтером на базе Klipper или Kalico.\n\n1. Нажмите «+», чтобы создать профиль принтера и выбрать шаблон конфига Klipper.\n2. Нажмите кремовую кнопку Пуск, чтобы запустить движок, Moonraker и веб-сервер.\n3. Откройте Fluidd или Mainsail через карточку веб-интерфейса для управления принтером.\n4. Используйте панель настроек для переключения движков (Klipper/Kalico) и фронтендов.\n\nВся обработка происходит локально на вашем устройстве — облако не требуется.</string>
+    <string name="About">О Kocoa Beam</string>
+    <string name="IntroTitle">Что такое Kocoa Beam?</string>
+    <string name="IntroText">Kocoa Beam — это Kotlin-переработка Beam Klipper с новым интерфейсом и значительно меньшим размером (138 МБ → 36 МБ).\n\nОсновные особенности:\n• Kotlin — безопасность от null, корутины без утечек\n• 10 параллельных экземпляров (против 4)\n• Нативная съёмка таймлапсов на Android (без FFmpeg)\n• Поддержка прошивок Klipper и Kalico\n• Брутальный UI с палитрой «Бумага/Мёд/Чернила»\n\nКак пользоваться:\n1. Нажмите «+», чтобы создать профиль принтера.\n2. Нажмите кнопку запуска, чтобы запустить движок.\n3. Откройте Fluidd или Mainsail для управления принтером.\n4. Используйте настройки для переключения движков и интерфейсов.\n\nВся обработка выполняется локально на вашем устройстве.</string>
     <string name="GitHubRepo">Репозиторий GitHub</string>
     <string name="OriginalBeamKlipper">Оригинал: Beam Klipper от utkabobr</string>
     <string name="CreditsTitle">Благодарности</string>
-    <string name="CreditsText">Kream — это глубоко тематизированный Kotlin-хардфорк Beam Klipper, изначально созданного utkabobr. Без его работы этого приложения не существовало бы.</string>
+    <string name="CreditsText">Kocoa Beam — это глубоко тематизированный Kotlin-хардфорк Beam Klipper, изначально созданного utkabobr. Без его работы этого приложения не существовало бы.</string>
     <string name="AppSettings">Настройки приложения</string>
     <string name="EngineFrontend">Движок и веб-интерфейс</string>
     <string name="QuickStart">Быстрый старт</string>
