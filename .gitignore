@@ -1,5 +1,7 @@
 *.iml
 .gradle
+.kotlin/
+.vscode/
 .DS_Store
 local.properties
 .externalNativeBuild
