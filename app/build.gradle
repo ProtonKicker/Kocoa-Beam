@@ -31,12 +31,13 @@ android {
         }
     }
     namespace 'ru.ytkab0bp.beamklipper'
-    compileSdk 35
+    compileSdk 36
+    buildToolsVersion "36.0.0"
 
     defaultConfig {
         applicationId "com.protonkicker.kream"
         minSdk 21
-        targetSdk 35
+        targetSdk 36
         multiDexEnabled true
         multiDexKeepFile file('multidex-keep.txt')
         multiDexKeepProguard file('multidex-keep.pro')
@@ -128,7 +129,7 @@ android {
         cmake {
             path file('CMakeLists.txt')
         }
-        ndkVersion "23.2.8568313"
+        ndkVersion "27.0.12077973"
     }
 
     buildFeatures {

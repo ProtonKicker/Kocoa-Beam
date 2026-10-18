@@ -2,12 +2,12 @@ apply plugin: 'com.android.application'
 
 android {
     namespace "ru.ytkab0bp.eventbus.demo"
-    compileSdk 34
+    compileSdk 36
 
     defaultConfig {
         applicationId "ru.ytkab0bp.eventbus.demo"
         minSdkVersion 19
-        targetSdkVersion 34
+        targetSdkVersion 36
         versionCode 1
         versionName "1.0"
 

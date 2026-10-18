@@ -44,6 +44,16 @@ Kocoa Beam features a complete UI redesign with:
 - **Native timelapse** — uses Android's hardware MediaCodec instead of bundled FFmpeg
 - **Local-only operation** — no cloud connectivity; all data stays on your device (Beam Cloud support removed)
 
+## Screenshots
+
+### Main Interface
+![Kocoa Beam Main Screen](docs/images/screenshot_main.png)
+*The main screen showing the printer instances list with the brutalist bento-box aesthetic.*
+
+### Settings
+![Kocoa Beam Settings](docs/images/screenshot_settings.png)
+*Settings screen for configuring firmware engine, web frontend, USB devices, camera, and more.*
+
 ## Choosing the Right Package
 
 Kocoa Beam provides two APK variants:

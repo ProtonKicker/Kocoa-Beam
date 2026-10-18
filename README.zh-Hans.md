@@ -42,6 +42,16 @@ Kocoa Beam 具有完全的 UI 重新设计：
 - **原生延时摄影** — 使用 Android 硬件 MediaCodec 而非捆绑 FFmpeg
 - **本地运行** — 无云端连接，所有数据留在设备上（已移除 Beam Cloud 支持）
 
+## 界面截图
+
+### 主界面
+![Kocoa Beam 主界面](docs/images/screenshot_main.png)
+*主界面展示了打印机实例列表，采用粗野主义 Bento 风格设计。*
+
+### 设置页面
+![Kocoa Beam 设置](docs/images/screenshot_settings.png)
+*设置页面用于配置固件引擎、Web 前端、USB 设备、摄像头等选项。*
+
 ## 选择正确的安装包
 
 Kocoa Beam 提供两个 APK 版本：
