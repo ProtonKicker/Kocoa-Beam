@@ -78,6 +78,11 @@ class MainActivity : AppCompatActivity() {
 
     fun isCurrentLauncher(): Boolean = isCurrentLauncher
 
+    override fun onResume() {
+        super.onResume()
+        ru.ytkab0bp.beamklipper.KlipperInstance.ensureWebServiceRunning()
+    }
+
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         when (requestCode) {

@@ -667,6 +667,23 @@ class KlipperInstance {
         }
 
         @JvmStatic
+        fun ensureWebServiceRunning() {
+            if (webServerConnection != null) return
+            if (!hasAnyRunningInstance()) return
+            Log.i(TAG, "ensureWebServiceRunning: WebService not bound but instances are running, re-binding")
+            mainHandler.post {
+                KlipperApp.EVENT_BUS.fireEvent(WebStateChangedEvent(ru.ytkab0bp.beamklipper.KlipperInstance.State.STARTING))
+                KlipperApp.INSTANCE.bindService(Intent(KlipperApp.INSTANCE, WebService::class.java), object : ServiceConnection {
+                    override fun onServiceConnected(name: ComponentName, service: IBinder) {
+                        KlipperApp.EVENT_BUS.fireEvent(WebStateChangedEvent(ru.ytkab0bp.beamklipper.KlipperInstance.State.RUNNING))
+                    }
+
+                    override fun onServiceDisconnected(name: ComponentName) {}
+                }.also { webServerConnection = it }, Context.BIND_AUTO_CREATE)
+            }
+        }
+
+        @JvmStatic
         fun resetSlotsForFreshStart() {
             Log.i(TAG, "resetSlotsForFreshStart: clearing slotById (was size=${slotById.size}), webServerConnection=${webServerConnection != null}, cameraServerConnection=${cameraServerConnection != null}")
             slotById.clear()
