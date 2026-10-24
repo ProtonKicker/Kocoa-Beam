@@ -74,7 +74,7 @@
                 android:resource="@xml/device_filter" />
         </activity>
         <service android:name=".service.CameraService" android:exported="false" android:process=":camera" android:foregroundServiceType="camera"/>
-        <service android:name=".service.WebService" android:exported="false" android:foregroundServiceType="dataSync"/>
+        <service android:name=".service.WebService" android:exported="false" android:process=":web" android:foregroundServiceType="dataSync"/>
         <service android:name=".service.KlippyService_0" android:exported="false" android:process=":klippy_0" android:foregroundServiceType="connectedDevice"/>
         <service android:name=".service.MoonrakerService_0" android:exported="false" android:process=":moonraker_0" android:foregroundServiceType="connectedDevice"/>
         <service android:name=".service.KlippyService_1" android:exported="false" android:process=":klippy_1" android:foregroundServiceType="connectedDevice"/>

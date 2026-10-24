@@ -46,7 +46,7 @@ class MainActivity : AppCompatActivity() {
         ) {
             PermissionsChecker.setIgnoreNotificationsChannel(true)
         }
-        isCurrentLauncher = intent?.categories?.contains(Intent.CATEGORY_HOME) == true
+        isCurrentLauncher = intent?.categories?.contains(Intent.CATEGORY_HOME) ?: false
 
         AppState.start()
 
