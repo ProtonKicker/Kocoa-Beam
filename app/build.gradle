@@ -41,8 +41,8 @@ android {
         multiDexEnabled true
         multiDexKeepFile file('multidex-keep.txt')
         multiDexKeepProguard file('multidex-keep.pro')
-        versionCode 11
-        versionName "v0"
+        versionCode 12
+        versionName "v0.0.1"
 
         buildConfigField "int", "SLOTS_COUNT", "4"
 

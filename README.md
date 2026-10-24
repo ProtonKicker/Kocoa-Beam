@@ -48,11 +48,23 @@ Kocoa Beam features a complete UI redesign with:
 
 ### Main Interface
 ![Kocoa Beam Main Screen](docs/images/screenshot_main.png)
-*The main screen showing the printer instances list with the brutalist bento-box aesthetic.*
+*The main screen showing the Mainsail web frontend card and printer instances with the brutalist bento-box aesthetic. Tested on Honor 9X (Android 10).*
 
 ### Settings
 ![Kocoa Beam Settings](docs/images/screenshot_settings.png)
-*Settings screen for configuring firmware engine, web frontend, USB devices, camera, and more.*
+*Settings screen for configuring firmware engine (Klipper/Kalico), web frontend (Mainsail/Fluidd), USB devices, and more.*
+
+### Fluidd Frontend (Klipper)
+![Fluidd Frontend](docs/images/screenshot_fluidd.png)
+*Fluidd web frontend served by Kocoa Beam over local network — fast, responsive touch interface for printer control.*
+
+### Kalico + Fluidd
+![Kalico with Fluidd](docs/images/screenshot_kalico_fluidd.png)
+*Kalico firmware engine with Fluidd frontend — all four engine/frontend combinations verified working.*
+
+### Kalico + Mainsail
+![Kalico with Mainsail](docs/images/screenshot_kalico_mainsail.png)
+*Kalico firmware engine with Mainsail frontend configuration.*
 
 ## Choosing the Right Package
 
