@@ -29,6 +29,7 @@ open class BasePythonService : Service() {
     private var pythonThread: HandlerThread? = null
     private var pythonHandler: Handler? = null
     private val pythonReady = CountDownLatch(1)
+    private val pythonStartRequested = java.util.concurrent.atomic.AtomicBoolean(false)
     protected var instance: KlipperInstance? = null
     protected lateinit var notificationManager: NotificationManager
 
@@ -37,14 +38,30 @@ open class BasePythonService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? {
-        val id = intent?.getStringExtra(KEY_INSTANCE); Log.i("beam_service", "onBind id: $id"); if(id==null) return null
-        instance = KlipperInstance.getInstance(id)
-        pythonHandler?.post {
-            runBlocking { KlipperApp.bundleInstallJob.await() }
-            pythonReady.await()
-            onStartPython()
-        }
+        if (intent?.getStringExtra(KEY_INSTANCE) == null) return null
+        ensurePrepared(intent)
         return serviceBinder
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        ensurePrepared(intent)
+        return START_REDELIVER_INTENT
+    }
+
+    protected open fun onServicePrepared() {}
+
+    private fun ensurePrepared(intent: Intent?) {
+        val id = intent?.getStringExtra(KEY_INSTANCE) ?: instance?.id ?: return
+        Log.i("beam_service", "prepare id: $id")
+        if (instance == null) instance = KlipperInstance.getInstance(id)
+        onServicePrepared()
+        if (pythonStartRequested.compareAndSet(false, true)) {
+            pythonHandler?.post {
+                runBlocking { KlipperApp.bundleInstallJob.await() }
+                pythonReady.await()
+                onStartPython()
+            }
+        }
     }
 
     override fun onCreate() {
@@ -64,7 +81,12 @@ open class BasePythonService : Service() {
                     KlipperApp.withChaquopyLock(this@BasePythonService) {
                         val platform = AndroidPlatform(this@BasePythonService)
                         platform.path
-                        Python.start(platform)
+                        // seedChaquopyDirLocked() may already have started Python in this
+                        // process on the very first launch; starting it again throws
+                        // IllegalStateException and used to kill the service.
+                        if (!Python.isStarted()) {
+                            Python.start(platform)
+                        }
                         py = Python.getInstance()
                     }
                 } catch (e: Exception) {

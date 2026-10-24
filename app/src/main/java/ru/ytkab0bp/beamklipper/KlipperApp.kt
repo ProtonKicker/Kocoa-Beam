@@ -217,7 +217,9 @@ class KlipperApp : MultiDexApplication() {
         val bundleInstallJob: Deferred<Unit>
             get() = _bundleInstallJob ?: synchronized(bundleInstallLock) {
                 _bundleInstallJob ?: appScope.async(Dispatchers.IO) {
-                    BundleInstaller.init(INSTANCE)
+                    // Every process unpacks the bundle on first start; without a cross-process
+                    // lock one process deletes the bundle dir while another is extracting it.
+                    withChaquopyLock(INSTANCE) { BundleInstaller.init(INSTANCE) }
                 }.also { _bundleInstallJob = it }
             }
 

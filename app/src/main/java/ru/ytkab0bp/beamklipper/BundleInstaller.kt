@@ -7,6 +7,8 @@ import java.io.FileOutputStream
 import java.nio.charset.StandardCharsets
 
 object BundleInstaller {
+    private const val VERSION_MARKER = ".bundle_version"
+
     @JvmStatic
     fun init(ctx: Context) {
         val prefs = ctx.getSharedPreferences("installation", 0)
@@ -17,12 +19,21 @@ object BundleInstaller {
             var ver = readString(assets, "bundle_version") + "_beam-" + info.versionName
 
             val root = ctx.filesDir
-            if (prefs.getString("version", "") != ver) {
+            val marker = File(root, VERSION_MARKER)
+            // SharedPreferences is cached per process, so a process that started before
+            // another one finished unpacking can still see the old version. The marker
+            // file is read after the cross-process lock, making the check reliable.
+            val installed = prefs.getString("version", "") == ver ||
+                runCatching { marker.readText() }.getOrNull() == ver
+            if (!installed) {
                 val index = JSONObject(readString(assets, "index.json"))
                 unpack(assets, index, root, "klipper")
                 unpack(assets, index, root, "kalico")
                 unpack(assets, index, root, "moonraker")
-                prefs.edit().putString("version", ver).apply()
+                prefs.edit().putString("version", ver).commit()
+                marker.writeText(ver)
+            } else if (!marker.exists()) {
+                marker.writeText(ver)
             }
 
             val nativeDir = File(info.applicationInfo!!.nativeLibraryDir)

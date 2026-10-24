@@ -82,41 +82,69 @@ class WebService : Service() {
     private var notificationManager: NotificationManager? = null
     private var beeperThread: HandlerThread? = null
     private var beeperHandler: Handler? = null
+    private var serverStarted = false
 
     override fun onBind(intent: Intent?): IBinder? {
-        notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        ensureForeground()
+        return Binder()
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        ensureForeground()
+        return if (serverStarted) START_STICKY else START_NOT_STICKY
+    }
+
+    private fun buildNotification(): Notification {
         val not = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
             Notification.Builder(this, KlipperApp.SERVICES_CHANNEL)
         else
             Notification.Builder(this)
-        not.setContentTitle(getString(R.string.WebTitle))
+        return not.setContentTitle(getString(R.string.WebTitle))
             .setContentText(getString(R.string.WebDescription))
             .setSmallIcon(R.drawable.icon_adaptive_foreground)
             .setOngoing(true)
-        notificationManager!!.notify(ID, not.build())
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(ID, not.build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-        } else {
-            startForeground(ID, not.build())
+            .build()
+    }
+
+    private fun ensureForeground() {
+        if (notificationManager == null) {
+            notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         }
-        return Binder()
+        val not = buildNotification()
+        notificationManager!!.notify(ID, not)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(ID, not, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            } else {
+                startForeground(ID, not)
+            }
+        } catch (t: Throwable) {
+            Log.e("WebService", "startForeground failed", t)
+        }
     }
 
     override fun onCreate() {
         super.onCreate()
+        notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        ensureForeground()
         mPrefs = KlipperApp.INSTANCE.getSharedPreferences("web", 0)
         beeperThread = HandlerThread("beeper").also { it.start() }
         beeperHandler = Handler(beeperThread!!.looper)
         try {
             httpServer.start()
+            serverStarted = true
         } catch (e: IOException) {
-            throw RuntimeException(e)
+            Log.e("WebService", "Failed to start HTTP server on port $PORT", e)
+            stopSelf()
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        httpServer.stop()
+        if (serverStarted) {
+            runCatching { httpServer.stop() }
+            serverStarted = false
+        }
         beeperThread?.quit()
         beeperThread = null
         beeperHandler = null

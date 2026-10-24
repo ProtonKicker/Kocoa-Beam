@@ -109,10 +109,12 @@ fun HomeScreen(
                                 .border(2.dp, Ink, RectangleShape)
                                 .clickable(
                                     onClick = {
-                                        if (running) {
-                                            openWebFrontend(context)
-                                        } else {
-                                            mainViewModel.runStopAll()
+                                        when {
+                                            running -> openWebFrontend(context)
+                                            webState == KlipperInstance.State.STARTING ||
+                                                webState == KlipperInstance.State.STOPPING ||
+                                                anyRunning -> Unit
+                                            else -> mainViewModel.runStopAll()
                                         }
                                     }
                                 )

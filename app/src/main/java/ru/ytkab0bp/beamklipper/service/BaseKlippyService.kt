@@ -31,8 +31,7 @@ open class BaseKlippyService(private val num: Int) : BasePythonService() {
     private var wifiLock: WifiManager.WifiLock? = null
     private val stoppedByUser = AtomicBoolean(false)
 
-    override fun onBind(intent: Intent?): IBinder? {
-        val b = super.onBind(intent) ?: return null
+    override fun onServicePrepared() {
         acquireLocks()
         val inst = instance
         if (inst != null) {
@@ -45,27 +44,16 @@ open class BaseKlippyService(private val num: Int) : BasePythonService() {
                 .setSmallIcon(R.drawable.icon_adaptive_foreground)
                 .setOngoing(true)
             notificationManager.notify(BASE_ID + num, not.build())
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                startForeground(BASE_ID + num, not.build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
-            } else {
-                startForeground(BASE_ID + num, not.build())
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    startForeground(BASE_ID + num, not.build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+                } else {
+                    startForeground(BASE_ID + num, not.build())
+                }
+            } catch (t: Throwable) {
+                Log.e("klippy_$num", "startForeground failed", t)
             }
         }
-        return b
-    }
-
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent != null) {
-            val id = intent.getStringExtra(BasePythonService.KEY_INSTANCE)
-            if (id != null && instance == null) {
-                val inst = KlipperInstance.getInstance(id)
-                val field = BasePythonService::class.java.getDeclaredField("instance")
-                field.isAccessible = true
-                try { field.set(this, inst) } catch (_: Throwable) {}
-                acquireLocks()
-            }
-        }
-        return START_REDELIVER_INTENT
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {

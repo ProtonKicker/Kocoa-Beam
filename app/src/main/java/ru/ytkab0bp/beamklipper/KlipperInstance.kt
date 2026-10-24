@@ -1,5 +1,6 @@
 package ru.ytkab0bp.beamklipper
 
+import android.app.ActivityManager
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -48,6 +49,18 @@ class KlipperInstance {
     private val stopSentinel = AtomicBoolean(false)
 
     fun getState(): State = state
+
+    private fun startServiceCompat(intent: Intent) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                KlipperApp.INSTANCE.startForegroundService(intent)
+            } else {
+                KlipperApp.INSTANCE.startService(intent)
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "Failed to start service ${intent.component}; relying on binding", t)
+        }
+    }
 
     val directory: File
         get() = File(KlipperApp.INSTANCE.filesDir, "instance${File.separator}$id")
@@ -121,6 +134,7 @@ class KlipperInstance {
         instanceBySlotId[instIdForSlot] = this
         @Suppress("DEPRECATION")
         slots[this] = slot
+        persistSlots()
         val instId = id
         mainHandler.post {
             if (stopRequested || stopSentinel.get()) {
@@ -159,6 +173,7 @@ class KlipperInstance {
                 }
                 val b1 = KlipperApp.INSTANCE.bindService(kIntent, kConn, Context.BIND_AUTO_CREATE)
                 klippyConnection = kConn
+                startServiceCompat(kIntent)
                 Log.i("beam_service", "bind klippy: $b1")
             } catch (e: ClassNotFoundException) {
                 throw RuntimeException(e)
@@ -193,6 +208,7 @@ class KlipperInstance {
                 }
                 KlipperApp.INSTANCE.bindService(mIntent, mConn, Context.BIND_AUTO_CREATE)
                 moonrakerConnection = mConn
+                startServiceCompat(mIntent)
             } catch (e: ClassNotFoundException) {
                 throw RuntimeException(e)
             }
@@ -304,6 +320,15 @@ class KlipperInstance {
             Log.i(TAG, "tryWatchdogRestart suppressed: state=$currentState for id=$id")
             return
         }
+        val isKlippy = whichService == "Klippy"
+        if (isKlippy && klippyConnected) {
+            Log.i(TAG, "tryWatchdogRestart suppressed: klippy already reconnected for id=$id")
+            return
+        }
+        if (!isKlippy && moonrakerConnected) {
+            Log.i(TAG, "tryWatchdogRestart suppressed: moonraker already reconnected for id=$id")
+            return
+        }
         val wasShort = (System.currentTimeMillis() - lastRunning) < WATCHDOG_MIN_RUN_MS && watchdogCount > 0
         watchdogCount++
         val shouldRestart = watchdogCount <= WATCHDOG_MAX_RETRIES && !wasShort
@@ -321,29 +346,39 @@ class KlipperInstance {
 
         try {
             val nm = KlipperApp.INSTANCE.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            if (klippyConnection != null) {
-                try { KlipperApp.INSTANCE.unbindService(klippyConnection!!) } catch (_: Throwable) {}
-                try { KlipperApp.INSTANCE.stopService(klippyIntent) } catch (_: Throwable) {}
-                try { nm.cancel(BaseKlippyService.BASE_ID + slot) } catch (_: Throwable) {}
-            }
-            if (moonrakerConnection != null) {
-                try { KlipperApp.INSTANCE.unbindService(moonrakerConnection!!) } catch (_: Throwable) {}
-                try { KlipperApp.INSTANCE.stopService(moonrakerIntent) } catch (_: Throwable) {}
-                try { nm.cancel(BaseMoonrakerService.BASE_ID + slot) } catch (_: Throwable) {}
+            if (isKlippy) {
+                if (klippyConnection != null) {
+                    try { KlipperApp.INSTANCE.unbindService(klippyConnection!!) } catch (_: Throwable) {}
+                    try { KlipperApp.INSTANCE.stopService(klippyIntent) } catch (_: Throwable) {}
+                    try { nm.cancel(BaseKlippyService.BASE_ID + slot) } catch (_: Throwable) {}
+                }
+            } else {
+                if (moonrakerConnection != null) {
+                    try { KlipperApp.INSTANCE.unbindService(moonrakerConnection!!) } catch (_: Throwable) {}
+                    try { KlipperApp.INSTANCE.stopService(moonrakerIntent) } catch (_: Throwable) {}
+                    try { nm.cancel(BaseMoonrakerService.BASE_ID + slot) } catch (_: Throwable) {}
+                }
             }
         } catch (_: Throwable) {}
-        klippyConnected = false
-        moonrakerConnected = false
-        klippyConnection = null
-        moonrakerConnection = null
-        klippyIntent = null
-        moonrakerIntent = null
+        if (isKlippy) {
+            klippyConnected = false
+            klippyConnection = null
+            klippyIntent = null
+        } else {
+            moonrakerConnected = false
+            moonrakerConnection = null
+            moonrakerIntent = null
+        }
 
         val delayMs = max(500L + watchdogCount * 1200L, WATCHDOG_RESTART_DELAY_MS)
         val instId = id
         val capturedSlot = slot
-        val capturedKlippyClass = try { Class.forName("ru.ytkab0bp.beamklipper.service.KlippyService_$capturedSlot") } catch (_: Throwable) { null }
-        val capturedMoonrakerClass = try { Class.forName("ru.ytkab0bp.beamklipper.service.MoonrakerService_$capturedSlot") } catch (_: Throwable) { null }
+        val capturedKlippyClass = if (isKlippy) {
+            try { Class.forName("ru.ytkab0bp.beamklipper.service.KlippyService_$capturedSlot") } catch (_: Throwable) { null }
+        } else null
+        val capturedMoonrakerClass = if (!isKlippy) {
+            try { Class.forName("ru.ytkab0bp.beamklipper.service.MoonrakerService_$capturedSlot") } catch (_: Throwable) { null }
+        } else null
         mainHandler.postDelayed({
             if (isUserStop || stopRequested || stopSentinel.get()) {
                 Log.i(TAG, "watchdog: canceling delayed restart for id=$instId because stop requested")
@@ -375,6 +410,7 @@ class KlipperInstance {
                     }
                     KlipperApp.INSTANCE.bindService(kIntent, kConn, Context.BIND_AUTO_CREATE)
                     klippyConnection = kConn
+                    startServiceCompat(kIntent)
                 }
                 if (capturedMoonrakerClass != null) {
                     val mIntent = Intent(KlipperApp.INSTANCE, capturedMoonrakerClass)
@@ -399,6 +435,7 @@ class KlipperInstance {
                     }
                     KlipperApp.INSTANCE.bindService(mIntent, mConn, Context.BIND_AUTO_CREATE)
                     moonrakerConnection = mConn
+                    startServiceCompat(mIntent)
                 }
             } catch (t: Throwable) {
                 Log.e(TAG, "watchdog restart failed for id=$instId", t)
@@ -448,24 +485,15 @@ class KlipperInstance {
                     slots.remove(entry)
                 }
             }
+            persistSlots()
             try {
                 val nm = KlipperApp.INSTANCE.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                 nm.cancel(WATCHDOG_BASE_ID + slot)
             } catch (_: Throwable) {}
             mainHandler.post { stopServerServicesIfNoSlots() }
         } else if (state == State.RUNNING) {
+            ensureWebServiceRunning()
             mainHandler.post {
-                if (webServerConnection == null) {
-                    KlipperApp.EVENT_BUS.fireEvent(WebStateChangedEvent(ru.ytkab0bp.beamklipper.KlipperInstance.State.STARTING))
-                    KlipperApp.INSTANCE.bindService(Intent(KlipperApp.INSTANCE, WebService::class.java), object : ServiceConnection {
-                        override fun onServiceConnected(name: ComponentName, service: IBinder) {
-                            KlipperApp.EVENT_BUS.fireEvent(WebStateChangedEvent(ru.ytkab0bp.beamklipper.KlipperInstance.State.RUNNING))
-                        }
-
-                        override fun onServiceDisconnected(name: ComponentName) {}
-                    }.also { webServerConnection = it }, Context.BIND_AUTO_CREATE)
-                }
-
                 if (Prefs.isCameraEnabled) {
                     if (cameraServerConnection == null) {
                         KlipperApp.INSTANCE.bindService(Intent(KlipperApp.INSTANCE, CameraService::class.java), object : ServiceConnection {
@@ -492,6 +520,8 @@ class KlipperInstance {
         private const val WATCHDOG_MAX_RETRIES = 3
         private const val WATCHDOG_MIN_RUN_MS = 8000L
         private const val WATCHDOG_RESTART_DELAY_MS = 1500L
+        private const val SLOT_PREFS = "instance_slots"
+        private const val SLOT_KEY = "slot_by_id"
 
         private val mainHandler = Handler(Looper.getMainLooper())
         @Deprecated("Use slotById instead (object identity bug). Kept temporarily for slotById migration helper access.")
@@ -539,9 +569,14 @@ class KlipperInstance {
                     val orphan = instanceBySlotId.remove(slotInstId)
                     Log.i(TAG, "instance $slotInstId (name=${orphan?.name}) no longer in DB, stopping (slot=$slotValue)")
                     slotById.remove(slotInstId)
-                    try { orphan?.stop() } catch (_: Throwable) {}
+                    if (orphan != null) {
+                        try { orphan.stop() } catch (_: Throwable) {}
+                    } else {
+                        stopSlotServices(slotValue)
+                    }
                 }
             }
+            persistSlots()
             mainHandler.post { stopServerServicesIfNoSlots() }
 
             instances = loaded.map { dbInst -> getInstance(dbInst.id ?: return@map null) }.filterNotNull()
@@ -552,9 +587,10 @@ class KlipperInstance {
             KlipperApp.EVENT_BUS.fireEvent(InstancesRefreshedEvent())
 
             for (inst in instances) {
-                Log.i("beam_instance", "instance id=${inst.id} name=${inst.name} autostart=${inst.autostart} state=${inst.getState()}")
-                if (inst.autostart && inst.getState() == State.IDLE) {
-                    Log.i("beam_instance", "  -> calling start()")
+                val liveSlot = inst.id?.let { slotById.containsKey(it) } == true
+                Log.i("beam_instance", "instance id=${inst.id} name=${inst.name} autostart=${inst.autostart} liveSlot=$liveSlot state=${inst.getState()}")
+                if (inst.getState() == State.IDLE && (inst.autostart || liveSlot)) {
+                    Log.i("beam_instance", "  -> calling start() (autostart=${inst.autostart}, liveSlot=$liveSlot)")
                     inst.start()
                 }
             }
@@ -617,14 +653,59 @@ class KlipperInstance {
         fun isWebServerRunning(): Boolean = webServerConnection != null
 
         private fun hasAnyRunningInstance(): Boolean {
-            for ((id, _) in slotById) {
-                val inst = instanceBySlotId[id] ?: continue
-                val s = inst.getState()
-                if (s == State.RUNNING || s == State.STARTING || s == State.STOPPING) {
+            if (slotById.isNotEmpty()) return true
+            // Also treat autostart instances in IDLE state as "will be running" to avoid
+            // a race where stopServerServicesIfNoSlots() kills services before they can bind
+            for (inst in instances) {
+                if (inst.autostart && inst.getState() == State.IDLE) {
                     return true
                 }
             }
             return false
+        }
+
+        private fun loadPersistedSlots(): Map<String, Int> {
+            return try {
+                val raw = KlipperApp.INSTANCE.getSharedPreferences(SLOT_PREFS, 0)
+                    .getString(SLOT_KEY, null) ?: return emptyMap()
+                raw.split(',').mapNotNull { entry ->
+                    val sep = entry.lastIndexOf(':')
+                    if (sep <= 0) return@mapNotNull null
+                    val value = entry.substring(sep + 1).toIntOrNull() ?: return@mapNotNull null
+                    entry.substring(0, sep) to value
+                }.toMap()
+            } catch (_: Throwable) {
+                emptyMap()
+            }
+        }
+
+        private fun persistSlots() {
+            try {
+                val raw = slotById.entries.joinToString(",") { "${it.key}:${it.value}" }
+                KlipperApp.INSTANCE.getSharedPreferences(SLOT_PREFS, 0)
+                    .edit().putString(SLOT_KEY, raw).apply()
+            } catch (_: Throwable) {}
+        }
+
+        @Suppress("DEPRECATION")
+        private fun isSlotServiceRunning(slot: Int): Boolean {
+            return try {
+                val am = KlipperApp.INSTANCE.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+                val running = am.getRunningServices(Int.MAX_VALUE).map { it.service.className }
+                running.contains("ru.ytkab0bp.beamklipper.service.KlippyService_$slot") ||
+                    running.contains("ru.ytkab0bp.beamklipper.service.MoonrakerService_$slot")
+            } catch (_: Throwable) {
+                false
+            }
+        }
+
+        private fun stopSlotServices(slot: Int) {
+            for (name in listOf("KlippyService", "MoonrakerService")) {
+                try {
+                    val cls = Class.forName("ru.ytkab0bp.beamklipper.service.${name}_$slot")
+                    KlipperApp.INSTANCE.stopService(Intent(KlipperApp.INSTANCE, cls))
+                } catch (_: Throwable) {}
+            }
         }
 
         private fun stopServerServicesIfNoSlots() {
@@ -636,6 +717,7 @@ class KlipperInstance {
             Log.d(TAG, "stopServerServicesIfNoSlots: proceeding to stop services")
             slotById.clear()
             instanceBySlotId.clear()
+            persistSlots()
             if (webServerConnection != null) {
                 KlipperApp.EVENT_BUS.fireEvent(WebStateChangedEvent(ru.ytkab0bp.beamklipper.KlipperInstance.State.STOPPING))
                 try { KlipperApp.INSTANCE.unbindService(webServerConnection!!) } catch (_: Throwable) {}
@@ -670,17 +752,50 @@ class KlipperInstance {
         fun ensureWebServiceRunning() {
             if (webServerConnection != null) return
             if (!hasAnyRunningInstance()) return
-            Log.i(TAG, "ensureWebServiceRunning: WebService not bound but instances are running, re-binding")
+            Log.i(TAG, "ensureWebServiceRunning: WebService not bound but instances are running, starting/binding")
             mainHandler.post {
+                if (webServerConnection != null) return@post
+                if (!hasAnyRunningInstance()) return@post
                 KlipperApp.EVENT_BUS.fireEvent(WebStateChangedEvent(ru.ytkab0bp.beamklipper.KlipperInstance.State.STARTING))
-                KlipperApp.INSTANCE.bindService(Intent(KlipperApp.INSTANCE, WebService::class.java), object : ServiceConnection {
+                val ctx = KlipperApp.INSTANCE
+                val intent = Intent(ctx, WebService::class.java)
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        ctx.startForegroundService(intent)
+                    } else {
+                        ctx.startService(intent)
+                    }
+                } catch (t: Throwable) {
+                    Log.w(TAG, "Failed to start WebService; relying on binding", t)
+                }
+                val conn = object : ServiceConnection {
                     override fun onServiceConnected(name: ComponentName, service: IBinder) {
                         KlipperApp.EVENT_BUS.fireEvent(WebStateChangedEvent(ru.ytkab0bp.beamklipper.KlipperInstance.State.RUNNING))
                     }
 
-                    override fun onServiceDisconnected(name: ComponentName) {}
-                }.also { webServerConnection = it }, Context.BIND_AUTO_CREATE)
+                    override fun onServiceDisconnected(name: ComponentName) {
+                        onWebConnectionLost(this)
+                    }
+
+                    override fun onBindingDied(name: ComponentName) {
+                        try { ctx.unbindService(this) } catch (_: Throwable) {}
+                        onWebConnectionLost(this)
+                    }
+                }
+                try {
+                    ctx.bindService(intent, conn, Context.BIND_AUTO_CREATE)
+                    webServerConnection = conn
+                } catch (t: Throwable) {
+                    Log.w(TAG, "Failed to bind WebService", t)
+                }
             }
+        }
+
+        private fun onWebConnectionLost(conn: ServiceConnection) {
+            if (webServerConnection !== conn) return
+            webServerConnection = null
+            Log.w(TAG, "WebService connection lost; scheduling re-bind")
+            mainHandler.postDelayed({ ensureWebServiceRunning() }, 1000L)
         }
 
         @JvmStatic
@@ -689,6 +804,14 @@ class KlipperInstance {
             slotById.clear()
             instanceBySlotId.clear()
             slots.clear()
+            // Services outlive the main process now; restore slots whose services are still
+            // running so a restarted process binds each instance back to its original slot.
+            val restored = loadPersistedSlots().filterValues { isSlotServiceRunning(it) }
+            slotById.putAll(restored)
+            persistSlots()
+            if (restored.isNotEmpty()) {
+                Log.i(TAG, "resetSlotsForFreshStart: restored live slots=$restored")
+            }
             webServerConnection = null
             cameraServerConnection = null
         }
