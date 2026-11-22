@@ -46,6 +46,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -241,9 +242,9 @@ fun ConfigScreen(
             }
         }
 
-        Spacer(Modifier.height(28.dp))
-        BrutalSectionHeader(stringResource(R.string.Other))
         if (context is MainActivity && context.isCurrentLauncher()) {
+            Spacer(Modifier.height(28.dp))
+            BrutalSectionHeader(stringResource(R.string.Other))
             BrutalActionRow(
                 title = stringResource(R.string.SystemSettings),
                 icon = R.drawable.ic_services_outline_28,
@@ -528,10 +529,16 @@ private fun BrutalAlertDialog(
     onDismissRequest: () -> Unit,
     title: @Composable () -> Unit,
     text: @Composable () -> Unit,
-    confirmButton: @Composable () -> Unit,
+    confirmButton: (@Composable () -> Unit)? = null,
     dismissButton: @Composable (() -> Unit)? = null
 ) {
-    Dialog(onDismissRequest = onDismissRequest) {
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true
+        )
+    ) {
         Box(modifier = Modifier.padding(20.dp)) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
@@ -546,16 +553,18 @@ private fun BrutalAlertDialog(
                     Column(modifier = Modifier.fillMaxWidth()) {
                         text()
                     }
-                    Spacer(Modifier.height(20.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        dismissButton?.let {
-                            it()
-                            Spacer(Modifier.width(8.dp))
+                    if (dismissButton != null || confirmButton != null) {
+                        Spacer(Modifier.height(20.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            dismissButton?.let {
+                                it()
+                                Spacer(Modifier.width(8.dp))
+                            }
+                            confirmButton?.invoke()
                         }
-                        confirmButton()
                     }
                 }
             }
@@ -679,12 +688,6 @@ private fun LanguageDialog(onDismiss: () -> Unit) {
                     }
                 }
             }
-        },
-        confirmButton = {
-            BrutalButton(
-                text = stringResource(android.R.string.cancel),
-                onClick = onDismiss
-            )
         }
     )
 }

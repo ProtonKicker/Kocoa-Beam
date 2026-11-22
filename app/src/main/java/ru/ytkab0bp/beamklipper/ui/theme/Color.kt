@@ -12,21 +12,21 @@ val BrandTertiaryLight = Color(0xFFB043FF)
 val BrandTertiaryDark = Color(0xFFD19BFF)
 
 val BgLight = Color(0xFFE9EBF2)
-val BgDark = Color(0xFF0B0F1A)
+val BgDark = Color(0xFF090D17)
 
 val SurfaceLight = Color(0xFFFFFFFF)
-val SurfaceDark = Color(0xFF151A2E)
+val SurfaceDark = Color(0xFF171E33)
 val SurfaceVariantLight = Color(0xFFEBEDF3)
-val SurfaceVariantDark = Color(0xFF1E2540)
+val SurfaceVariantDark = Color(0xFF222B45)
 
 val OnLight = Color(0xFF14161F)
 val OnDark = Color(0xFFEFF0FF)
 
 val MutedLight = Color(0xFF5D6270)
-val MutedDark = Color(0xFFA7ADC2)
+val MutedDark = Color(0xFFBAC2DA)
 
 val OutlineLight = Color(0x1F14161F)
-val OutlineDark = Color(0x26EFF0FF)
+val OutlineDark = Color(0x40EFF0FF)
 
 val ContainerLowestLight = Color(0xFFFFFFFF)
 val ContainerLowLight = Color(0xFFF7F8FB)
@@ -34,11 +34,11 @@ val ContainerLight = Color(0xFFF1F2F7)
 val ContainerHighLight = Color(0xFFEAECF3)
 val ContainerHighestLight = Color(0xFFE3E6EF)
 
-val ContainerLowestDark = Color(0xFF080B12)
-val ContainerLowDark = Color(0xFF10141F)
-val ContainerDark = Color(0xFF141927)
-val ContainerHighDark = Color(0xFF1A2032)
-val ContainerHighestDark = Color(0xFF212840)
+val ContainerLowestDark = Color(0xFF070A11)
+val ContainerLowDark = Color(0xFF111827)
+val ContainerDark = Color(0xFF182033)
+val ContainerHighDark = Color(0xFF1F2840)
+val ContainerHighestDark = Color(0xFF28324D)
 
 val ErrorLight = Color(0xFFD92D56)
 val ErrorDark = Color(0xFFFF5C7A)

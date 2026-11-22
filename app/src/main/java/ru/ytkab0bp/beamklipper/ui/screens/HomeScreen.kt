@@ -224,22 +224,24 @@ fun HomeScreen(
             }
         }
 
-        FloatingCircleButton(
-            icon = R.drawable.ic_add_outline_28,
-            contentDescription = stringResource(R.string.NewInstance),
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 22.dp)
-                .padding(bottom = bottomInset + 22.dp),
-            onClick = {
-                if (instances.size >= KlipperInstance.SLOTS_COUNT) {
-                    noFreeSlots = true
-                } else {
-                    editorInstance = null
-                    editorVisible = true
+        if (instances.size < KlipperInstance.SLOTS_COUNT) {
+            FloatingCircleButton(
+                icon = R.drawable.ic_add_outline_28,
+                contentDescription = stringResource(R.string.NewInstance),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 22.dp)
+                    .padding(bottom = bottomInset + 22.dp),
+                onClick = {
+                    if (instances.size >= KlipperInstance.SLOTS_COUNT) {
+                        noFreeSlots = true
+                    } else {
+                        editorInstance = null
+                        editorVisible = true
+                    }
                 }
-            }
-        )
+            )
+        }
     }
 
     deleteInstance?.let { inst ->

@@ -99,6 +99,18 @@ fun InstanceEditorSheet(
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         DialogSystemBars()
+        val fieldShape = MaterialTheme.shapes.large
+        val usingLightPalette = MaterialTheme.colorScheme.background.luminance() > 0.5f
+        val fieldColor = if (usingLightPalette) {
+            MaterialTheme.colorScheme.surface
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerHighest
+        }
+        val fieldBorderColor = if (usingLightPalette) {
+            MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)
+        } else {
+            MaterialTheme.colorScheme.outlineVariant
+        }
         Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             Column(
                 modifier = Modifier
@@ -163,10 +175,8 @@ fun InstanceEditorSheet(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(
-                                        MaterialTheme.colorScheme.surfaceContainerHigh,
-                                        MaterialTheme.shapes.large
-                                    )
+                                    .background(fieldColor, fieldShape)
+                                    .border(width = 1.dp, color = fieldBorderColor, shape = fieldShape)
                                     .padding(horizontal = 14.dp, vertical = 12.dp)
                             ) {
                                 if (name.text.isEmpty()) {
@@ -194,10 +204,8 @@ fun InstanceEditorSheet(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(
-                                    MaterialTheme.colorScheme.surfaceContainerHigh,
-                                    MaterialTheme.shapes.large
-                                )
+                                .background(fieldColor, fieldShape)
+                                .border(width = 1.dp, color = fieldBorderColor, shape = fieldShape)
                                 .clickable { if (filesReady) showConfigPicker = true }
                         ) {
                             Row(
@@ -226,10 +234,8 @@ fun InstanceEditorSheet(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(
-                                    MaterialTheme.colorScheme.surfaceContainerHigh,
-                                    MaterialTheme.shapes.large
-                                )
+                                .background(fieldColor, fieldShape)
+                                .border(width = 1.dp, color = fieldBorderColor, shape = fieldShape)
                                 .clickable { openInstanceFolder(context, editInstance) }
                         ) {
                             Row(
@@ -255,10 +261,8 @@ fun InstanceEditorSheet(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(
-                                MaterialTheme.colorScheme.surfaceContainerHigh,
-                                MaterialTheme.shapes.large
-                            )
+                            .background(fieldColor, fieldShape)
+                            .border(width = 1.dp, color = fieldBorderColor, shape = fieldShape)
                     ) {
                         Row(
                             modifier = Modifier
