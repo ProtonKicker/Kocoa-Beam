@@ -40,6 +40,8 @@
     <string name="InstanceDelete">Delete «%s»?</string>
     <string name="InstanceDeleteConfirm">Are you sure?</string>
     <string name="InstanceOK">OK</string>
+    <string name="InstanceStartAll">Start all</string>
+    <string name="InstanceStopAll">Stop all</string>
     <string name="NewInstance">New profile</string>
     <string name="EditInstance">Edit profile</string>
     <string name="EditOpenDirectory">Open profile folder</string>
@@ -48,6 +50,7 @@
     <string name="ErrorNameEmpty">Name can not be empty</string>
     <string name="ErrorConfigEmpty">Select a config</string>
     <string name="Settings">Settings</string>
+    <string name="Search">Search</string>
     <string name="Camera">Camera</string>
     <string name="EnableCamera">Enable camera server</string>
     <string name="USB" translatable="false">USB</string>

@@ -9,24 +9,28 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -35,8 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -54,12 +57,14 @@ import ru.ytkab0bp.beamklipper.serial.UsbSerialManager
 import ru.ytkab0bp.beamklipper.ui.components.BrutalButton
 import ru.ytkab0bp.beamklipper.ui.components.BrutalSwitch
 import ru.ytkab0bp.beamklipper.ui.components.BrutalTile
+import ru.ytkab0bp.beamklipper.ui.components.bouncyClickable
 import ru.ytkab0bp.beamklipper.ui.state.SettingsViewModel
-import ru.ytkab0bp.beamklipper.ui.theme.Accent
-import ru.ytkab0bp.beamklipper.ui.theme.Ink
-import ru.ytkab0bp.beamklipper.ui.theme.InkMuted
-import ru.ytkab0bp.beamklipper.ui.theme.Paper
-import ru.ytkab0bp.beamklipper.ui.theme.PaperAlt
+import ru.ytkab0bp.beamklipper.ui.theme.BadgeBlue
+import ru.ytkab0bp.beamklipper.ui.theme.BadgeGreen
+import ru.ytkab0bp.beamklipper.ui.theme.BadgeOrange
+import ru.ytkab0bp.beamklipper.ui.theme.BadgePink
+import ru.ytkab0bp.beamklipper.ui.theme.BadgeSlate
+import ru.ytkab0bp.beamklipper.ui.theme.BadgeTeal
 import ru.ytkab0bp.beamklipper.utils.Prefs
 import java.io.File
 
@@ -74,9 +79,10 @@ fun ConfigScreen(
     val cameraEnabled by viewModel.cameraEnabled.collectAsStateWithLifecycle()
     val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val navBarInsets = WindowInsets.navigationBars.asPaddingValues()
+    val bottomInset = navBarInsets.calculateBottomPadding()
 
     var showListUsb by remember { mutableStateOf(false) }
-    var showQr by remember { mutableStateOf(false) }
     var showLanguage by remember { mutableStateOf(false) }
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
@@ -87,62 +93,64 @@ fun ConfigScreen(
 
     Column(
         modifier = modifier
-            .fillMaxWidth()
+            .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp)
-            .padding(top = 8.dp, bottom = 40.dp)
+            .padding(top = 8.dp)
     ) {
+        val tileBg = MaterialTheme.colorScheme.surface
+        val onSurface = MaterialTheme.colorScheme.onSurface
+        val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
+
         BrutalSectionHeader(stringResource(R.string.EngineFrontend))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             BrutalTile(
                 modifier = Modifier.weight(1f).height(140.dp),
-                background = Accent,
+                background = tileBg,
                 onClick = { viewModel.cycleEngine() }
             ) {
                 Column {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_memory_chip_outline_28),
-                        contentDescription = null,
-                        tint = Ink,
-                        modifier = Modifier.size(32.dp)
+                    IconBadge(
+                        icon = R.drawable.ic_memory_chip_outline_28,
+                        background = BadgeBlue,
+                        contentColor = Color.White
                     )
                     Spacer(Modifier.height(20.dp))
                     Text(
                         text = stringResource(R.string.FirmwareEngine),
                         style = MaterialTheme.typography.titleMedium,
-                        color = Ink
+                        color = onSurface
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
                         text = viewModel.engineTitle(engine),
                         style = MaterialTheme.typography.bodySmall,
-                        color = InkMuted
+                        color = onSurfaceVariant
                     )
                 }
             }
             BrutalTile(
                 modifier = Modifier.weight(1f).height(140.dp),
-                background = Accent,
+                background = tileBg,
                 onClick = { viewModel.cycleFrontend() }
             ) {
                 Column {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_sync_outline_28),
-                        contentDescription = null,
-                        tint = Ink,
-                        modifier = Modifier.size(32.dp)
+                    IconBadge(
+                        icon = R.drawable.ic_sync_outline_28,
+                        background = BadgeGreen,
+                        contentColor = Color.White
                     )
                     Spacer(Modifier.height(20.dp))
                     Text(
                         text = stringResource(R.string.WebFrontend),
                         style = MaterialTheme.typography.titleMedium,
-                        color = Ink
+                        color = onSurface
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
                         text = viewModel.frontendTitle(webFrontend),
                         style = MaterialTheme.typography.bodySmall,
-                        color = InkMuted
+                        color = onSurfaceVariant
                     )
                 }
             }
@@ -153,108 +161,45 @@ fun ConfigScreen(
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             BrutalTile(
                 modifier = Modifier.weight(1f).height(140.dp),
-                background = PaperAlt,
+                background = tileBg,
                 onClick = { viewModel.cycleUsbNaming() }
             ) {
                 Column {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_usb_cable_28),
-                        contentDescription = null,
-                        tint = Ink,
-                        modifier = Modifier.size(32.dp)
+                    IconBadge(
+                        icon = R.drawable.ic_usb_cable_28,
+                        background = BadgeOrange,
+                        contentColor = Color.White
                     )
                     Spacer(Modifier.height(20.dp))
                     Text(
                         text = stringResource(R.string.USBDeviceNaming),
                         style = MaterialTheme.typography.titleMedium,
-                        color = Ink
+                        color = onSurface
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
                         text = viewModel.usbNamingTitle(usbNaming),
                         style = MaterialTheme.typography.bodySmall,
-                        color = InkMuted
+                        color = onSurfaceVariant
                     )
                 }
             }
             BrutalTile(
                 modifier = Modifier.weight(1f).height(140.dp),
-                background = PaperAlt,
+                background = tileBg,
                 onClick = { showListUsb = true }
             ) {
                 Column {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_grid_layout_outline_28),
-                        contentDescription = null,
-                        tint = Ink,
-                        modifier = Modifier.size(32.dp)
+                    IconBadge(
+                        icon = R.drawable.ic_grid_layout_outline_28,
+                        background = BadgeTeal,
+                        contentColor = Color.White
                     )
                     Spacer(Modifier.height(20.dp))
                     Text(
                         text = stringResource(R.string.ListUSB),
                         style = MaterialTheme.typography.titleMedium,
-                        color = Ink
-                    )
-                }
-            }
-        }
-
-        Spacer(Modifier.height(28.dp))
-        BrutalSectionHeader(stringResource(R.string.Camera))
-        BrutalSwitchRow(
-            title = stringResource(R.string.EnableCamera),
-            checked = cameraEnabled,
-            onCheckedChange = { checked ->
-                if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                } else {
-                    viewModel.setCameraEnabled(checked)
-                }
-            }
-        )
-
-        Spacer(Modifier.height(28.dp))
-        BrutalSectionHeader(stringResource(R.string.Other))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (context is MainActivity && context.isCurrentLauncher()) {
-                BrutalTile(
-                    modifier = Modifier.weight(1f).height(140.dp),
-                    background = PaperAlt,
-                    onClick = { context.startActivity(Intent(Settings.ACTION_SETTINGS)) }
-                ) {
-                    Column {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_services_outline_28),
-                            contentDescription = null,
-                            tint = Ink,
-                            modifier = Modifier.size(32.dp)
-                        )
-                        Spacer(Modifier.height(20.dp))
-                        Text(
-                            text = stringResource(R.string.SystemSettings),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Ink
-                        )
-                    }
-                }
-            }
-            BrutalTile(
-                modifier = Modifier.weight(1f).height(140.dp),
-                background = PaperAlt,
-                onClick = { showQr = true }
-            ) {
-                Column {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_download_outline_28),
-                        contentDescription = null,
-                        tint = Ink,
-                        modifier = Modifier.size(32.dp)
-                    )
-                    Spacer(Modifier.height(20.dp))
-                    Text(
-                        text = stringResource(R.string.OtherGetFirmware),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Ink
+                        color = onSurface
                     )
                 }
             }
@@ -262,52 +207,68 @@ fun ConfigScreen(
 
         Spacer(Modifier.height(28.dp))
         BrutalSectionHeader(stringResource(R.string.AppSettings))
-        BrutalTile(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(140.dp),
-            background = Accent,
-            onClick = { showLanguage = true }
+        Surface(
+            shape = MaterialTheme.shapes.large,
+            color = tileBg,
+            tonalElevation = 0.dp,
+            shadowElevation = 0.dp
         ) {
             Column {
-                Icon(
-                    painter = painterResource(R.drawable.ic_globe_outline_28),
-                    contentDescription = null,
-                    tint = Ink,
-                    modifier = Modifier.size(32.dp)
+                GroupSwitchRow(
+                    title = stringResource(R.string.EnableCamera),
+                    checked = cameraEnabled,
+                    icon = R.drawable.ic_camera_outline_28,
+                    iconBackground = BadgePink,
+                    onCheckedChange = { checked ->
+                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                        } else {
+                            viewModel.setCameraEnabled(checked)
+                        }
+                    }
                 )
-                Spacer(Modifier.height(20.dp))
-                Text(
-                    text = stringResource(R.string.AppLanguage),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Ink
+                HorizontalDivider(
+                    modifier = Modifier.padding(start = 76.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
                 )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = viewModel.languageTitle(appLanguage),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = InkMuted
+                GroupActionRow(
+                    title = stringResource(R.string.AppLanguage),
+                    subtitle = viewModel.languageTitle(appLanguage),
+                    icon = R.drawable.ic_globe_outline_28,
+                    iconBackground = BadgePink,
+                    onClick = { showLanguage = true }
                 )
             }
+        }
+
+        Spacer(Modifier.height(28.dp))
+        BrutalSectionHeader(stringResource(R.string.Other))
+        if (context is MainActivity && context.isCurrentLauncher()) {
+            BrutalActionRow(
+                title = stringResource(R.string.SystemSettings),
+                icon = R.drawable.ic_services_outline_28,
+                iconBackground = BadgeSlate,
+                onClick = { context.startActivity(Intent(Settings.ACTION_SETTINGS)) }
+            )
         }
 
         Spacer(Modifier.height(28.dp))
         BrutalSectionHeader(stringResource(R.string.About))
         BrutalTile(
             modifier = Modifier.fillMaxWidth(),
-            background = PaperAlt
+            background = tileBg
         ) {
             Column {
                 Text(
                     text = stringResource(R.string.IntroTitle),
                     style = MaterialTheme.typography.headlineSmall,
-                    color = Ink
+                    color = onSurface
                 )
                 Spacer(Modifier.height(12.dp))
                 Text(
                     text = stringResource(R.string.IntroText),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = Ink
+                    color = onSurface
                 )
             }
         }
@@ -315,31 +276,31 @@ fun ConfigScreen(
         Spacer(Modifier.height(12.dp))
         BrutalTile(
             modifier = Modifier.fillMaxWidth(),
-            background = Paper
+            background = Color.Unspecified
         ) {
             Text(
                 text = stringResource(R.string.PrivacyNote),
                 style = MaterialTheme.typography.bodySmall,
-                color = InkMuted
+                color = onSurfaceVariant
             )
         }
 
         Spacer(Modifier.height(12.dp))
         BrutalTile(
             modifier = Modifier.fillMaxWidth(),
-            background = PaperAlt
+            background = tileBg
         ) {
             Column {
                 Text(
                     text = stringResource(R.string.CreditsTitle),
                     style = MaterialTheme.typography.headlineSmall,
-                    color = Ink
+                    color = onSurface
                 )
                 Spacer(Modifier.height(12.dp))
                 Text(
                     text = stringResource(R.string.CreditsText),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Ink
+                    color = onSurface
                 )
             }
         }
@@ -348,7 +309,7 @@ fun ConfigScreen(
         BrutalSectionHeader("Information")
         BrutalTile(
             modifier = Modifier.fillMaxWidth(),
-            background = Paper,
+            background = Color.Unspecified,
             onClick = {
                 context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/utkabobr/BeamKlipper")))
             }
@@ -360,14 +321,14 @@ fun ConfigScreen(
                 Icon(
                     painter = painterResource(R.drawable.ic_external_link_outline_24),
                     contentDescription = null,
-                    tint = Ink,
+                    tint = onSurface,
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(Modifier.width(16.dp))
                 Text(
                     text = stringResource(R.string.OriginalBeamKlipper),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = Ink,
+                    color = onSurface,
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -375,7 +336,7 @@ fun ConfigScreen(
                 Icon(
                     painterResource(R.drawable.ic_chevron_right_28),
                     contentDescription = null,
-                    tint = Ink,
+                    tint = onSurfaceVariant,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -384,7 +345,7 @@ fun ConfigScreen(
         Spacer(Modifier.height(12.dp))
         BrutalTile(
             modifier = Modifier.fillMaxWidth(),
-            background = Paper,
+            background = Color.Unspecified,
             onClick = {
                 context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/ProtonKicker/Cream")))
             }
@@ -396,14 +357,14 @@ fun ConfigScreen(
                 Icon(
                     painter = painterResource(R.drawable.ic_github_28),
                     contentDescription = null,
-                    tint = Ink,
+                    tint = onSurface,
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(Modifier.width(16.dp))
                 Text(
                     text = stringResource(R.string.GitHubRepo),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = Ink,
+                    color = onSurface,
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -411,21 +372,17 @@ fun ConfigScreen(
                 Icon(
                     painterResource(R.drawable.ic_chevron_right_28),
                     contentDescription = null,
-                    tint = Ink,
+                    tint = onSurfaceVariant,
                     modifier = Modifier.size(20.dp)
                 )
             }
         }
+
+        Spacer(Modifier.height(bottomInset + 156.dp))
     }
 
     if (showListUsb) {
         ListUsbDialog(context, onDismiss = { showListUsb = false })
-    }
-    if (showQr) {
-        QRCodeDialog(
-            link = "https://github.com/utkabobr/klipper/releases/tag/prebuilt-v0.12.0",
-            onDismiss = { showQr = false }
-        )
     }
     if (showLanguage) {
         LanguageDialog(onDismiss = { showLanguage = false })
@@ -437,34 +394,132 @@ private fun BrutalSectionHeader(text: String) {
     Text(
         text = text.uppercase(),
         style = MaterialTheme.typography.labelMedium,
-        color = InkMuted,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(start = 4.dp, bottom = 12.dp)
     )
 }
 
 @Composable
-private fun BrutalSwitchRow(
+private fun GroupSwitchRow(
     title: String,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    icon: Int,
+    iconBackground: Color
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .bouncyClickable(pressedScale = 0.98f) { onCheckedChange(!checked) }
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconBadge(icon = icon, background = iconBackground, contentColor = Color.White)
+        Spacer(Modifier.width(16.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        BrutalSwitch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Composable
+private fun BrutalActionRow(
+    title: String,
+    subtitle: String? = null,
+    icon: Int,
+    iconBackground: Color,
+    onClick: () -> Unit
 ) {
     BrutalTile(
         modifier = Modifier.fillMaxWidth(),
-        background = Paper,
-        onClick = { onCheckedChange(!checked) }
+        background = Color.Unspecified,
+        onClick = onClick
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            IconBadge(icon = icon, background = iconBackground, contentColor = Color.White)
+            Spacer(Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                subtitle?.let {
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            Icon(
+                painter = painterResource(R.drawable.ic_chevron_right_28),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun GroupActionRow(
+    title: String,
+    subtitle: String? = null,
+    icon: Int,
+    iconBackground: Color,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .bouncyClickable(pressedScale = 0.98f, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconBadge(icon = icon, background = iconBackground, contentColor = Color.White)
+        Spacer(Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
-                color = Ink,
-                modifier = Modifier.weight(1f)
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-            BrutalSwitch(checked = checked, onCheckedChange = onCheckedChange)
+            subtitle?.let {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
+        Icon(
+            painter = painterResource(R.drawable.ic_chevron_right_28),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp)
+        )
     }
 }
 
@@ -478,11 +533,12 @@ private fun BrutalAlertDialog(
 ) {
     Dialog(onDismissRequest = onDismissRequest) {
         Box(modifier = Modifier.padding(20.dp)) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Paper, RectangleShape)
-                    .border(2.dp, Ink, RectangleShape)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 0.dp,
+                shadowElevation = 14.dp
             ) {
                 Column(modifier = Modifier.padding(24.dp)) {
                     title()
@@ -508,6 +564,31 @@ private fun BrutalAlertDialog(
 }
 
 @Composable
+private fun IconBadge(
+    icon: Int,
+    background: Color,
+    contentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.size(44.dp),
+        shape = RoundedCornerShape(14.dp),
+        color = background,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                painter = painterResource(icon),
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+    }
+}
+
+@Composable
 private fun ListUsbDialog(context: Context, onDismiss: () -> Unit) {
     val manager = context.getSystemService(Context.USB_SERVICE) as UsbManager
     val list = mutableListOf<String>()
@@ -522,13 +603,25 @@ private fun ListUsbDialog(context: Context, onDismiss: () -> Unit) {
     }
     BrutalAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.ListUSBTitle), style = MaterialTheme.typography.titleLarge, color = Ink) },
+        title = {
+            Text(
+                stringResource(R.string.ListUSBTitle),
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        },
         text = {
             if (list.isEmpty()) {
-                Text(stringResource(R.string.ListUSBNoDevices), color = Ink)
+                Text(stringResource(R.string.ListUSBNoDevices), color = MaterialTheme.colorScheme.onSurface)
             } else {
                 Column {
-                    list.forEach { Text(it, style = MaterialTheme.typography.bodyMedium, color = Ink) }
+                    list.forEach {
+                        Text(
+                            it,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
             }
         },
@@ -552,14 +645,19 @@ private fun LanguageDialog(onDismiss: () -> Unit) {
     )
     BrutalAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.AppLanguage), style = MaterialTheme.typography.titleLarge, color = Ink) },
+        title = {
+            Text(
+                stringResource(R.string.AppLanguage),
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        },
         text = {
             Column {
                 options.forEachIndexed { index, label ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RectangleShape)
                             .clickable {
                                 Prefs.appLanguage = when (index) {
                                     0 -> Prefs.LANGUAGE_SYSTEM
@@ -573,7 +671,11 @@ private fun LanguageDialog(onDismiss: () -> Unit) {
                             }
                             .padding(vertical = 12.dp)
                     ) {
-                        Text(label, style = MaterialTheme.typography.bodyLarge, color = Ink)
+                        Text(
+                            label,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 }
             }

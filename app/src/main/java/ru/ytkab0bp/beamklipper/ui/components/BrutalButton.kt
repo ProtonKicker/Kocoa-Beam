@@ -1,27 +1,21 @@
 package ru.ytkab0bp.beamklipper.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import ru.ytkab0bp.beamklipper.ui.theme.Accent
-import ru.ytkab0bp.beamklipper.ui.theme.Ink
-import ru.ytkab0bp.beamklipper.ui.theme.InkOnAccent
-import ru.ytkab0bp.beamklipper.ui.theme.Paper
 
 @Composable
 fun BrutalButton(
@@ -29,28 +23,34 @@ fun BrutalButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    background: Color = Accent,
-    contentColor: Color = InkOnAccent,
+    background: Color = Color.Unspecified,
+    contentColor: Color = Color.Unspecified,
     minHeight: Dp = 40.dp
 ) {
-    val shape = RectangleShape
-    val bg = if (enabled) background else background.copy(alpha = 0.4f)
-    Box(
-        modifier = modifier
-            .heightIn(min = minHeight)
-            .clip(shape)
-            .background(bg, shape)
-            .border(2.dp, Ink, shape)
-            .clickable(enabled = enabled, onClick = onClick),
-        contentAlignment = Alignment.Center
+    val resolvedBackground = if (background == Color.Unspecified) MaterialTheme.colorScheme.primary else background
+    val resolvedContentColor = if (contentColor == Color.Unspecified) MaterialTheme.colorScheme.onPrimary else contentColor
+    val bg = if (enabled) resolvedBackground else resolvedBackground.copy(alpha = 0.4f)
+    Surface(
+        modifier = modifier.heightIn(min = minHeight),
+        shape = MaterialTheme.shapes.large,
+        color = bg,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.titleSmall,
-            color = if (enabled) contentColor else contentColor.copy(alpha = 0.6f),
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 20.dp)
-        )
+        Box(
+            modifier = Modifier
+                .background(Color.Transparent)
+                .bouncyClickable(enabled = enabled, onClick = onClick)
+                .padding(horizontal = 20.dp, vertical = 10.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.titleSmall,
+                color = if (enabled) resolvedContentColor else resolvedContentColor.copy(alpha = 0.6f),
+                fontWeight = FontWeight.SemiBold
+            )
+        }
     }
 }
 
@@ -59,24 +59,29 @@ fun BrutalTextButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    contentColor: Color = Ink
+    contentColor: Color = Color.Unspecified
 ) {
-    val shape = RectangleShape
-    Box(
-        modifier = modifier
-            .height(40.dp)
-            .clip(shape)
-            .background(Paper, shape)
-            .border(2.dp, Ink, shape)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
+    val resolvedContentColor = if (contentColor == Color.Unspecified) MaterialTheme.colorScheme.onSurface else contentColor
+    Surface(
+        modifier = modifier.height(40.dp),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.titleSmall,
-            color = contentColor,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        )
+        Box(
+            modifier = Modifier
+                .clip(MaterialTheme.shapes.large)
+                .bouncyClickable(onClick = onClick)
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.titleSmall,
+                color = resolvedContentColor,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
     }
 }

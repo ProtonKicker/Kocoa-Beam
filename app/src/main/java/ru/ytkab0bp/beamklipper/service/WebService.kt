@@ -530,7 +530,12 @@ class WebService : Service() {
                 val response = Response.newChunkedResponse(Status.OK, mimeType, input)
                 response.addHeader("Date", dateFormat.format(Date()))
                 response.addHeader("Last-Modified", lastModifiedString)
-                if (resolvedPath.endsWith(".html") || resolvedPath.endsWith(".json")) {
+                val noCache = resolvedPath.endsWith(".html") ||
+                    resolvedPath.endsWith(".json") ||
+                    resolvedPath == "/sw.js" ||
+                    resolvedPath == "/service-worker.js" ||
+                    resolvedPath.startsWith("/workbox-")
+                if (noCache) {
                     response.addHeader("Cache-Control", "no-cache, no-store, must-revalidate")
                     response.addHeader("Pragma", "no-cache")
                     response.addHeader("Expires", "0")

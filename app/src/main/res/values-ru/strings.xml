@@ -6,6 +6,7 @@
     <string name="KlippyDescription">Klippy работает в фоне…</string>
     <string name="MoonrakerTitle">Moonraker (%s)</string>
     <string name="MoonrakerDescription">Moonraker работает в фоне…</string>
+    <string name="MoonrakerStartFailed">Не удалось занять порт — перезапустите профиль</string>
     <string name="WebTitle">Веб сервер</string>
     <string name="WebDescription">Веб сервер работает в фоне…</string>
     <string name="CameraTitle">Сервер камеры</string>
@@ -34,9 +35,12 @@
     <string name="InstanceConfig">Конфиг</string>
     <string name="InstanceCreate">Создать</string>
     <string name="InstanceConfigHint">Нажмите для выбора конфига…</string>
+    <string name="InstanceConfigLoading">Подготовка конфигураций, подождите…</string>
     <string name="InstanceDelete">Удалить «%s»?</string>
     <string name="InstanceDeleteConfirm">Вы уверены?</string>
     <string name="InstanceOK">ОК</string>
+    <string name="InstanceStartAll">Запустить все</string>
+    <string name="InstanceStopAll">Остановить все</string>
     <string name="NewInstance">Новый профиль</string>
     <string name="EditInstance">Редактирование профиля</string>
     <string name="EditOpenDirectory">Открыть папку профиля</string>
@@ -45,6 +49,7 @@
     <string name="ErrorNameEmpty">Имя не может быть пустым</string>
     <string name="ErrorConfigEmpty">Выберите конфиг</string>
     <string name="Settings">Настройки</string>
+    <string name="Search">Поиск</string>
     <string name="Camera">Камера</string>
     <string name="EnableCamera">Включить сервер камеры</string>
     <string name="ListUSB">Отобразить список USB устройств</string>

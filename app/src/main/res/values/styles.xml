@@ -1,14 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+    <!--
+      Base theme holds only attributes that exist since API 21 so the app stays
+      installable on Android 5.x. Attributes added in later platform versions
+      (light status/navigation bar icons) live in the values-v23 / values-v27
+      variants below.
+    -->
+    <style name="AppTheme.Base" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="colorPrimary">@color/accent</item>
         <item name="colorPrimaryDark">@color/ink</item>
         <item name="colorAccent">@color/accent</item>
         <item name="android:colorAccent">@color/accent</item>
-        <item name="android:windowBackground">@color/paper</item>
+        <item name="android:windowBackground">@color/windowBackground</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@color/paper</item>
-        <item name="android:windowLightStatusBar">true</item>
-        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:navigationBarColor">@color/navigationBarColor</item>
     </style>
+
+    <style name="AppTheme" parent="AppTheme.Base" />
 </resources>

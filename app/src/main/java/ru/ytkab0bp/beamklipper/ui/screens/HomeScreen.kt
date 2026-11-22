@@ -5,16 +5,22 @@ import android.content.Intent
 import android.net.Uri
 import android.net.wifi.WifiManager
 import android.text.format.Formatter
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,24 +28,27 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -53,15 +62,15 @@ import ru.ytkab0bp.beamklipper.R
 import ru.ytkab0bp.beamklipper.service.WebService
 import ru.ytkab0bp.beamklipper.ui.components.BrutalButton
 import ru.ytkab0bp.beamklipper.ui.components.BrutalTextButton
-import ru.ytkab0bp.beamklipper.ui.components.BrutalTile
+import ru.ytkab0bp.beamklipper.ui.components.bouncyClickable
+import ru.ytkab0bp.beamklipper.ui.components.bouncyCombinedClickable
 import ru.ytkab0bp.beamklipper.ui.state.MainViewModel
-import ru.ytkab0bp.beamklipper.ui.theme.Accent
-import ru.ytkab0bp.beamklipper.ui.theme.Ink
-import ru.ytkab0bp.beamklipper.ui.theme.InkMuted
-import ru.ytkab0bp.beamklipper.ui.theme.Paper
+import ru.ytkab0bp.beamklipper.ui.theme.BadgeGreen
+import ru.ytkab0bp.beamklipper.ui.theme.BadgeTeal
+import ru.ytkab0bp.beamklipper.ui.theme.badgeColorFor
 import ru.ytkab0bp.beamklipper.utils.Prefs
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     isCurrentLauncher: Boolean,
@@ -86,317 +95,173 @@ fun HomeScreen(
             }
         }
     }
-
-    val listState = rememberLazyListState()
+    val navBarInsets = WindowInsets.navigationBars.asPaddingValues()
+    val bottomInset = navBarInsets.calculateBottomPadding()
 
     Box(modifier = modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Paper)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(top = 12.dp, bottom = bottomInset + 156.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.Instances),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(Modifier.height(16.dp))
+
+            val isFluidd = webFrontend == Prefs.FRONTEND_FLUIDD
+            val running = webState == KlipperInstance.State.RUNNING
+
+            Surface(
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surface
             ) {
-                Box(Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 12.dp)) {
-                        val isFluidd = webFrontend == Prefs.FRONTEND_FLUIDD
-                        val running = webState == KlipperInstance.State.RUNNING
-                        val webBg = if (running) Accent else Paper
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(64.dp)
-                                .clip(RectangleShape)
-                                .background(webBg, RectangleShape)
-                                .border(2.dp, Ink, RectangleShape)
-                                .clickable(
-                                    onClick = {
-                                        when {
-                                            running -> openWebFrontend(context)
-                                            webState == KlipperInstance.State.STARTING ||
-                                                webState == KlipperInstance.State.STOPPING ||
-                                                anyRunning -> Unit
-                                            else -> mainViewModel.runStopAll()
-                                        }
-                                    }
-                                )
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            contentAlignment = Alignment.CenterStart
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    painter = painterResource(
-                                        if (isFluidd) R.drawable.ic_square_stack_up_outline_28 else R.drawable.ic_sailing_24
-                                    ),
-                                    contentDescription = null,
-                                    tint = Ink,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Spacer(Modifier.width(12.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(if (isFluidd) R.string.Fluidd else R.string.Mainsail),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = Ink,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    if (running) {
-                                        Text(
-                                            text = webIpInfo(context),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = InkMuted
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                state = listState,
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                    start = 20.dp, top = 0.dp, end = 20.dp, bottom = 140.dp
-                ),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                stickyHeader(key = "instances-label", contentType = "label") {
-                Text(
-                    text = "INSTANCES",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Ink,
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Paper)
-                        .padding(start = 4.dp, top = 8.dp, bottom = 8.dp)
-                )
-            }
-
-            items(
-                instances.chunked(2),
-                key = { it.joinToString("|") { inst -> inst.id ?: inst.name } },
-                contentType = { "inst-row" }
-            ) { chunk ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        .bouncyClickable(
+                            pressedScale = 0.98f,
+                            onClick = {
+                                when {
+                                    running -> openWebFrontend(context)
+                                    webState == KlipperInstance.State.STARTING ||
+                                        webState == KlipperInstance.State.STOPPING ||
+                                        anyRunning -> Unit
+                                    else -> mainViewModel.runStopAll()
+                                }
+                            }
+                        )
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    chunk.forEach { inst ->
-                        key(inst.id ?: inst.name) {
-                            val k = inst.id ?: inst.name
-                            val stateSnapshot by rememberUpdatedState(instanceStates)
-                            val stateVal by remember(instanceStates, k) {
-                                derivedStateOf { stateSnapshot[k] ?: inst.getState() }
-                            }
-                            val onClickInst by rememberUpdatedState(onClick@{
-                                val id = inst.id ?: return@onClick
-                                val canonical = KlipperInstance.getInstance(id) ?: return@onClick
-                                editorInstance = canonical
-                                editorVisible = true
-                            })
-                            val onLongClickInst by rememberUpdatedState(onLongClick@{
-                                val id = inst.id ?: return@onLongClick
-                                val canonical = KlipperInstance.getInstance(id) ?: return@onLongClick
-                                deleteInstance = canonical
-                            })
-                            val capturedInst = inst
-                            val onToggleInst by rememberUpdatedState(onToggle@{
-                                when (stateVal) {
-                                    KlipperInstance.State.STARTING, KlipperInstance.State.STOPPING -> {}
-                                    KlipperInstance.State.IDLE -> {
-                                        if (!KlipperInstance.hasFreeSlots()) {
-                                            noFreeSlots = true
-                                        } else {
-                                            mainViewModel.toggle(capturedInst)
-                                        }
-                                    }
-                                    else -> mainViewModel.toggle(capturedInst)
-                                }
-                            })
-                            val instBg = Paper
-                            val toggleBg = when (stateVal) {
-                                KlipperInstance.State.RUNNING, KlipperInstance.State.STOPPING -> Accent
-                                else -> Paper
-                            }
-                            BrutalTile(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .heightIn(min = 130.dp)
-                                    .combinedClickable(
-                                        onClick = onClickInst,
-                                        onLongClick = onLongClickInst
-                                    ),
-                                background = instBg
-                            ) {
-                                Column(
-                                    modifier = Modifier.fillMaxSize()
-                                ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.Top
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(inst.icon.drawable),
-                                            contentDescription = null,
-                                            tint = Ink,
-                                            modifier = Modifier.size(28.dp)
-                                        )
-                                    }
-                                    Spacer(Modifier.height(8.dp))
-                                    Text(
-                                        text = inst.name,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Ink,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(16.dp)
-                                    ) {
-                                        val statusText: String? = when (stateVal) {
-                                            KlipperInstance.State.STARTING -> stringResource(R.string.InstanceStarting)
-                                            KlipperInstance.State.STOPPING -> stringResource(R.string.InstanceStopping)
-                                            KlipperInstance.State.RUNNING -> stringResource(R.string.InstanceRunning)
-                                            KlipperInstance.State.IDLE -> stringResource(R.string.InstanceIdle)
-                                        }
-                                        if (statusText != null) {
-                                            Text(
-                                                text = statusText,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = InkMuted,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                                modifier = Modifier.fillMaxWidth()
-                                            )
-                                        }
-                                    }
-                                    Spacer(Modifier.height(8.dp))
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.End
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(40.dp)
-                                                .clip(RectangleShape)
-                                                .background(toggleBg, RectangleShape)
-                                                .border(2.dp, Ink, RectangleShape)
-                                                .clickable(
-                                                    enabled = stateVal != KlipperInstance.State.STARTING && stateVal != KlipperInstance.State.STOPPING,
-                                                    onClick = onToggleInst
-                                                ),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(
-                                                painterResource(if (stateVal == KlipperInstance.State.RUNNING || stateVal == KlipperInstance.State.STOPPING) R.drawable.ic_stop_24 else R.drawable.ic_play_28),
-                                                contentDescription = null,
-                                                tint = Ink,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
+                    LeadingIcon(
+                        drawable = if (isFluidd) R.drawable.ic_square_stack_up_outline_28 else R.drawable.ic_sailing_24,
+                        background = BadgeTeal
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(if (isFluidd) R.string.Fluidd else R.string.Mainsail),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        AnimatedVisibility(
+                            visible = running,
+                            enter = fadeIn(tween(160)) + expandVertically(tween(160)),
+                            exit = fadeOut(tween(100)) + shrinkVertically(tween(120))
+                        ) {
+                            Text(
+                                text = webIpInfo(context),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
-                    if (chunk.size == 1) {
-                        Spacer(Modifier.weight(1f))
-                    }
-                }
-            }
-        }
-        }
-
-        Row(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(horizontal = 24.dp, vertical = 32.dp),
-            horizontalArrangement = Arrangement.spacedBy(32.dp)
-        ) {
-            val fabShape = RectangleShape
-            Box(
-                modifier = Modifier.size(72.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(fabShape)
-                        .background(Accent, fabShape)
-                        .border(2.dp, Ink, fabShape)
-                        .let {
-                                it.clickable(
-                                    onClick = {
-                                        if (instances.size >= KlipperInstance.SLOTS_COUNT) {
-                                            noFreeSlots = true
-                                        } else {
-                                            editorInstance = null
-                                            editorVisible = true
-                                        }
-                                    }
-                                )
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
                     Icon(
-                        painterResource(R.drawable.ic_add_outline_28),
-                        contentDescription = stringResource(R.string.NewInstance),
-                        tint = Ink,
-                        modifier = Modifier.size(36.dp)
+                        painter = painterResource(R.drawable.ic_chevron_right_28),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
+
             if (instances.isNotEmpty()) {
-                Box(
-                    modifier = Modifier.size(72.dp)
+                Spacer(Modifier.height(14.dp))
+                Surface(
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surface
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(fabShape)
-                            .background(Accent, fabShape)
-                            .border(2.dp, Ink, fabShape)
-                            .let {
-                                it.clickable(onClick = { mainViewModel.runStopAll() })
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            painterResource(if (anyRunning) R.drawable.ic_stop_24 else R.drawable.ic_play_28),
-                            contentDescription = null,
-                            tint = Ink,
-                            modifier = Modifier.size(36.dp)
-                        )
+                    Column {
+                        instances.forEachIndexed { index, inst ->
+                            if (index > 0) {
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.outlineVariant
+                                )
+                            }
+                            val k = inst.id ?: inst.name
+                            val stateVal = instanceStates[k] ?: inst.getState()
+                            InstanceRow(
+                                instance = inst,
+                                state = stateVal,
+                                accent = badgeColorFor(index),
+                                onClick = {
+                                    inst.id?.let { id ->
+                                        KlipperInstance.getInstance(id)?.let {
+                                            editorInstance = it
+                                            editorVisible = true
+                                        }
+                                    }
+                                },
+                                onLongClick = {
+                                    inst.id?.let { id ->
+                                        KlipperInstance.getInstance(id)?.let { deleteInstance = it }
+                                    }
+                                },
+                                onToggle = {
+                                    when (stateVal) {
+                                        KlipperInstance.State.STARTING,
+                                        KlipperInstance.State.STOPPING -> Unit
+                                        KlipperInstance.State.IDLE -> {
+                                            if (!KlipperInstance.hasFreeSlots()) {
+                                                noFreeSlots = true
+                                            } else {
+                                                mainViewModel.toggle(inst)
+                                            }
+                                        }
+                                        else -> mainViewModel.toggle(inst)
+                                    }
+                                }
+                            )
+                        }
                     }
                 }
             }
         }
+
+        FloatingCircleButton(
+            icon = R.drawable.ic_add_outline_28,
+            contentDescription = stringResource(R.string.NewInstance),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 22.dp)
+                .padding(bottom = bottomInset + 22.dp),
+            onClick = {
+                if (instances.size >= KlipperInstance.SLOTS_COUNT) {
+                    noFreeSlots = true
+                } else {
+                    editorInstance = null
+                    editorVisible = true
+                }
+            }
+        )
     }
 
     deleteInstance?.let { inst ->
         Dialog(onDismissRequest = { deleteInstance = null }) {
-            val dlgShape = RectangleShape
+            val dlgShape = MaterialTheme.shapes.large
             Box(modifier = Modifier.padding(20.dp)) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Paper, dlgShape)
-                        .border(2.dp, Ink, dlgShape)
+                        .background(MaterialTheme.colorScheme.surface, dlgShape)
                 ) {
                     Column(modifier = Modifier.padding(24.dp)) {
                         Text(
                             text = stringResource(R.string.InstanceDelete, inst.name),
                             style = MaterialTheme.typography.titleLarge,
-                            color = Ink
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(Modifier.height(16.dp))
                         Text(
                             text = stringResource(R.string.InstanceDeleteConfirm),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Ink
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(Modifier.height(24.dp))
                         Row(
@@ -424,19 +289,18 @@ fun HomeScreen(
 
     if (noFreeSlots) {
         Dialog(onDismissRequest = { noFreeSlots = false }) {
-            val dlgShape = RectangleShape
+            val dlgShape = MaterialTheme.shapes.large
             Box(modifier = Modifier.padding(20.dp)) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Paper, dlgShape)
-                        .border(2.dp, Ink, dlgShape)
+                        .background(MaterialTheme.colorScheme.surface, dlgShape)
                 ) {
                     Column(modifier = Modifier.padding(24.dp)) {
                         Text(
                             text = stringResource(R.string.NoFreeSlotsDescription, KlipperInstance.SLOTS_COUNT),
                             style = MaterialTheme.typography.bodyLarge,
-                            color = Ink
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(Modifier.height(24.dp))
                         Row(
@@ -459,6 +323,153 @@ fun HomeScreen(
             editInstance = editorInstance,
             onDismiss = { editorVisible = false }
         )
+    }
+}
+
+@Composable
+private fun LeadingIcon(
+    drawable: Int,
+    background: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = background,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+        modifier = modifier.size(40.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                painter = painterResource(drawable),
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun InstanceRow(
+    instance: KlipperInstance,
+    state: KlipperInstance.State,
+    accent: Color,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val statusText = when (state) {
+        KlipperInstance.State.STARTING -> stringResource(R.string.InstanceStarting)
+        KlipperInstance.State.STOPPING -> stringResource(R.string.InstanceStopping)
+        KlipperInstance.State.RUNNING -> stringResource(R.string.InstanceRunning)
+        KlipperInstance.State.IDLE -> stringResource(R.string.InstanceIdle)
+    }
+    val statusColor = when (state) {
+        KlipperInstance.State.RUNNING -> BadgeGreen
+        KlipperInstance.State.STARTING, KlipperInstance.State.STOPPING -> MaterialTheme.colorScheme.primary
+        KlipperInstance.State.IDLE -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val running = state == KlipperInstance.State.RUNNING
+    val toggleColor by animateColorAsState(
+        targetValue = if (running) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
+        animationSpec = tween(200),
+        label = "toggleColor"
+    )
+    val toggleTint by animateColorAsState(
+        targetValue = if (running) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+        animationSpec = tween(200),
+        label = "toggleTint"
+    )
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 68.dp)
+            .bouncyCombinedClickable(
+                pressedScale = 0.98f,
+                onLongClick = onLongClick,
+                onClick = onClick
+            )
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        LeadingIcon(drawable = instance.icon.drawable, background = accent)
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = instance.name,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = statusText,
+                style = MaterialTheme.typography.bodySmall,
+                color = statusColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        val toggleEnabled = state != KlipperInstance.State.STARTING && state != KlipperInstance.State.STOPPING
+        Surface(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .bouncyClickable(
+                    enabled = toggleEnabled,
+                    pressedScale = 0.85f,
+                    onClick = onToggle
+                ),
+            shape = CircleShape,
+            color = toggleColor,
+            tonalElevation = 0.dp,
+            shadowElevation = 0.dp
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    painter = painterResource(
+                        if (state == KlipperInstance.State.RUNNING || state == KlipperInstance.State.STOPPING) {
+                            R.drawable.ic_stop_24
+                        } else {
+                            R.drawable.ic_play_28
+                        }
+                    ),
+                    contentDescription = null,
+                    tint = toggleTint,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FloatingCircleButton(
+    icon: Int,
+    contentDescription: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .size(56.dp)
+            .bouncyClickable(pressedScale = 0.88f, onClickLabel = contentDescription, onClick = onClick),
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp,
+        shadowElevation = 12.dp
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                painter = painterResource(icon),
+                contentDescription = contentDescription,
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(26.dp)
+            )
+        }
     }
 }
 

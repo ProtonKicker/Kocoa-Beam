@@ -39,6 +39,8 @@
     <string name="InstanceDelete">删除“%s”？</string>
     <string name="InstanceDeleteConfirm">您确定吗？</string>
     <string name="InstanceOK">确定</string>
+    <string name="InstanceStartAll">全部启动</string>
+    <string name="InstanceStopAll">全部停止</string>
     <string name="NewInstance">新建配置</string>
     <string name="EditInstance">编辑配置</string>
     <string name="EditOpenDirectory">打开配置文件夹</string>
@@ -47,6 +49,7 @@
     <string name="ErrorNameEmpty">名称不能为空</string>
     <string name="ErrorConfigEmpty">请选择配置</string>
     <string name="Settings">设置</string>
+    <string name="Search">搜索</string>
     <string name="Camera">摄像头</string>
     <string name="EnableCamera">启用摄像头服务器</string>
     <string name="ListUSB">列出 USB 设备</string>

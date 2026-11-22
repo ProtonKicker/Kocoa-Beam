@@ -39,6 +39,8 @@
     <string name="InstanceDelete">刪除「%s」？</string>
     <string name="InstanceDeleteConfirm">您確定嗎？</string>
     <string name="InstanceOK">確定</string>
+    <string name="InstanceStartAll">全部啟動</string>
+    <string name="InstanceStopAll">全部停止</string>
     <string name="NewInstance">新增設定檔</string>
     <string name="EditInstance">編輯設定檔</string>
     <string name="EditOpenDirectory">開啟設定檔資料夾</string>
@@ -47,6 +49,7 @@
     <string name="ErrorNameEmpty">名稱不可為空</string>
     <string name="ErrorConfigEmpty">請選擇設定</string>
     <string name="Settings">設定</string>
+    <string name="Search">搜尋</string>
     <string name="Camera">相機</string>
     <string name="EnableCamera">啟用相機伺服器</string>
     <string name="ListUSB">列出 USB 裝置</string>

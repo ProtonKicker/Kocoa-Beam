@@ -9,7 +9,6 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,8 +34,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
@@ -49,9 +46,7 @@ import ru.ytkab0bp.beamklipper.PermissionsChecker
 import ru.ytkab0bp.beamklipper.R
 import ru.ytkab0bp.beamklipper.ui.components.BrutalButton
 import ru.ytkab0bp.beamklipper.ui.components.BrutalSwitch
-import ru.ytkab0bp.beamklipper.ui.theme.Accent
-import ru.ytkab0bp.beamklipper.ui.theme.Ink
-import ru.ytkab0bp.beamklipper.ui.theme.Paper
+import androidx.compose.material3.Surface
 
 @Composable
 fun PermissionScreen(onNext: () -> Unit) {
@@ -82,12 +77,10 @@ fun PermissionScreen(onNext: () -> Unit) {
         notificationsChecked = granted
     }
 
-    val cardShape = RectangleShape
-
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Paper)
+            .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.safeDrawing)
             .verticalScroll(rememberScrollState())
             .padding(20.dp),
@@ -96,17 +89,18 @@ fun PermissionScreen(onNext: () -> Unit) {
         Box(
             modifier = Modifier.fillMaxWidth()
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Paper, cardShape)
-                    .border(2.dp, Ink, cardShape)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.extraLarge,
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp
             ) {
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
                     Text(
                         text = stringResource(R.string.AppName),
                         style = MaterialTheme.typography.titleLarge,
-                        color = Ink,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 24.dp, vertical = 12.dp)
@@ -204,7 +198,6 @@ fun PermissionScreen(onNext: () -> Unit) {
                         BrutalButton(
                             text = stringResource(R.string.Next),
                             onClick = onNext,
-                            background = Accent,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(52.dp)
@@ -222,26 +215,24 @@ private fun PermissionRow(
     checked: Boolean,
     onRowClick: () -> Unit
 ) {
-    val rowShape = RectangleShape
-    Box(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
+            .clickable(onClick = onRowClick),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(2.dp, Ink, rowShape)
-                .clip(rowShape)
-                .clickable(onClick = onRowClick)
-                .background(Paper)
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
-                color = Ink,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f)
             )
             Spacer(Modifier.width(12.dp))

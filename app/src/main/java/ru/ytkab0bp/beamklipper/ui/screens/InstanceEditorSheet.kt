@@ -1,6 +1,7 @@
 package ru.ytkab0bp.beamklipper.ui.screens
 
 import android.content.Intent
+import android.view.WindowManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -28,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,13 +39,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ru.ytkab0bp.beamklipper.KlipperApp
 import ru.ytkab0bp.beamklipper.KlipperInstance
@@ -51,10 +58,6 @@ import ru.ytkab0bp.beamklipper.R
 import ru.ytkab0bp.beamklipper.ui.components.BrutalButton
 import ru.ytkab0bp.beamklipper.ui.components.BrutalSwitch
 import ru.ytkab0bp.beamklipper.ui.state.InstanceEditorViewModel
-import ru.ytkab0bp.beamklipper.ui.theme.Accent
-import ru.ytkab0bp.beamklipper.ui.theme.Ink
-import ru.ytkab0bp.beamklipper.ui.theme.InkMuted
-import ru.ytkab0bp.beamklipper.ui.theme.Paper
 
 @Composable
 fun InstanceEditorSheet(
@@ -95,7 +98,8 @@ fun InstanceEditorSheet(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Box(modifier = Modifier.fillMaxSize().background(Paper)) {
+        DialogSystemBars()
+        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -107,26 +111,29 @@ fun InstanceEditorSheet(
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
+                    androidx.compose.material3.Surface(
                         modifier = Modifier
                             .size(44.dp)
-                            .background(Paper, RectangleShape)
-                            .border(2.dp, Ink, RectangleShape)
                             .clickable(onClick = onDismiss),
-                        contentAlignment = Alignment.Center
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        tonalElevation = 0.dp,
+                        shadowElevation = 0.dp
                     ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_arrow_left_28),
-                            contentDescription = stringResource(android.R.string.cancel),
-                            tint = Ink,
-                            modifier = Modifier.size(24.dp)
-                        )
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_arrow_left_28),
+                                contentDescription = stringResource(android.R.string.cancel),
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
                     }
                     Spacer(Modifier.width(12.dp))
                     Text(
                         text = stringResource(if (editInstance == null) R.string.NewInstance else R.string.EditInstance),
                         style = MaterialTheme.typography.headlineMedium,
-                        color = Ink
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 }
 
@@ -140,7 +147,7 @@ fun InstanceEditorSheet(
                     Text(
                         text = stringResource(R.string.InstanceName),
                         style = MaterialTheme.typography.titleSmall,
-                        color = InkMuted
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(8.dp))
                     BasicTextField(
@@ -150,21 +157,23 @@ fun InstanceEditorSheet(
                             name = v
                         },
                         singleLine = true,
-                        cursorBrush = SolidColor(Ink),
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = Ink),
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                         decorationBox = { innerTextField ->
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(Paper, RectangleShape)
-                                    .border(2.dp, Ink, RectangleShape)
+                                    .background(
+                                        MaterialTheme.colorScheme.surfaceContainerHigh,
+                                        MaterialTheme.shapes.large
+                                    )
                                     .padding(horizontal = 14.dp, vertical = 12.dp)
                             ) {
                                 if (name.text.isEmpty()) {
                                     Text(
                                         text = stringResource(R.string.InstanceDefaultNameHint),
                                         style = MaterialTheme.typography.bodyLarge,
-                                        color = InkMuted
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                                 innerTextField()
@@ -177,7 +186,7 @@ fun InstanceEditorSheet(
                         Text(
                             text = stringResource(R.string.InstanceConfig),
                             style = MaterialTheme.typography.titleSmall,
-                            color = InkMuted
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(8.dp))
                         val filesReady = filesList.isNotEmpty()
@@ -185,8 +194,10 @@ fun InstanceEditorSheet(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Paper, RectangleShape)
-                                .border(2.dp, Ink, RectangleShape)
+                                .background(
+                                    MaterialTheme.colorScheme.surfaceContainerHigh,
+                                    MaterialTheme.shapes.large
+                                )
                                 .clickable { if (filesReady) showConfigPicker = true }
                         ) {
                             Row(
@@ -200,13 +211,13 @@ fun InstanceEditorSheet(
                                         else -> stringResource(R.string.InstanceConfigHint)
                                     },
                                     style = MaterialTheme.typography.bodyLarge,
-                                    color = if (configFile != null) Ink else InkMuted,
+                                    color = if (configFile != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.weight(1f)
                                 )
                                 Icon(
                                     painterResource(R.drawable.ic_chevron_down_28),
                                     contentDescription = null,
-                                    tint = Ink
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -215,8 +226,10 @@ fun InstanceEditorSheet(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Paper, RectangleShape)
-                                .border(2.dp, Ink, RectangleShape)
+                                .background(
+                                    MaterialTheme.colorScheme.surfaceContainerHigh,
+                                    MaterialTheme.shapes.large
+                                )
                                 .clickable { openInstanceFolder(context, editInstance) }
                         ) {
                             Row(
@@ -226,13 +239,13 @@ fun InstanceEditorSheet(
                                 Icon(
                                     painterResource(R.drawable.ic_folder_outline_28),
                                     contentDescription = null,
-                                    tint = Ink
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Spacer(Modifier.width(12.dp))
                                 Text(
                                     text = stringResource(R.string.EditOpenDirectory),
                                     style = MaterialTheme.typography.bodyLarge,
-                                    color = Ink
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -242,8 +255,10 @@ fun InstanceEditorSheet(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Paper, RectangleShape)
-                            .border(2.dp, Ink, RectangleShape)
+                            .background(
+                                MaterialTheme.colorScheme.surfaceContainerHigh,
+                                MaterialTheme.shapes.large
+                            )
                     ) {
                         Row(
                             modifier = Modifier
@@ -254,7 +269,7 @@ fun InstanceEditorSheet(
                             Text(
                                 text = stringResource(R.string.Autostart),
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = Ink,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.weight(1f)
                             )
                             BrutalSwitch(checked = autostart, onCheckedChange = { autostart = it })
@@ -278,7 +293,6 @@ fun InstanceEditorSheet(
                             }
                         },
                         enabled = !saving,
-                        background = Accent,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp)
@@ -293,6 +307,7 @@ fun InstanceEditorSheet(
             onDismissRequest = { showConfigPicker = false },
             properties = DialogProperties(usePlatformDefaultWidth = false)
         ) {
+            DialogSystemBars()
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
@@ -300,12 +315,14 @@ fun InstanceEditorSheet(
                 contentAlignment = Alignment.TopCenter
             ) {
                 val dialogMaxHeight = maxHeight
-                Box(
+                androidx.compose.material3.Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = dialogMaxHeight)
-                        .background(Paper, RectangleShape)
-                        .border(2.dp, Ink, RectangleShape)
+                        .heightIn(max = dialogMaxHeight),
+                    shape = MaterialTheme.shapes.extraLarge,
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 0.dp,
+                    shadowElevation = 14.dp
                 ) {
                     Column(
                         modifier = Modifier
@@ -320,15 +337,13 @@ fun InstanceEditorSheet(
                             Text(
                                 text = stringResource(R.string.InstanceConfig),
                                 style = MaterialTheme.typography.titleLarge,
-                                color = Ink,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.weight(1f)
                             )
                             Spacer(Modifier.width(12.dp))
                             BrutalButton(
                                 text = stringResource(android.R.string.cancel),
                                 onClick = { showConfigPicker = false },
-                                background = Paper,
-                                contentColor = Ink,
                                 minHeight = 36.dp,
                                 modifier = Modifier.height(36.dp)
                             )
@@ -351,7 +366,11 @@ fun InstanceEditorSheet(
                                         }
                                         .padding(vertical = 12.dp)
                                 ) {
-                                    Text(f, style = MaterialTheme.typography.bodyLarge, color = Ink)
+                                    Text(
+                                        f,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
                                 }
                             }
                         }
@@ -363,24 +382,26 @@ fun InstanceEditorSheet(
 
     error?.let {
         Dialog(onDismissRequest = { error = null }) {
+            DialogSystemBars()
             Box(modifier = Modifier.padding(20.dp)) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Paper, RectangleShape)
-                        .border(2.dp, Ink, RectangleShape)
+                androidx.compose.material3.Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 0.dp,
+                    shadowElevation = 14.dp
                 ) {
                     Column(modifier = Modifier.padding(24.dp)) {
                         Text(
                             text = stringResource(R.string.Error),
                             style = MaterialTheme.typography.titleLarge,
-                            color = Ink
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(Modifier.height(12.dp))
                         Text(
                             text = it,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = InkMuted
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(24.dp))
                         Row(
@@ -396,6 +417,24 @@ fun InstanceEditorSheet(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun DialogSystemBars() {
+    val view = LocalView.current
+    val bgColor = MaterialTheme.colorScheme.background
+    val bg = bgColor.toArgb()
+    val nav = bgColor.toArgb()
+    val lightIcons = bgColor.luminance() > 0.5f
+    SideEffect {
+        val window = (view.parent as? DialogWindowProvider)?.window ?: return@SideEffect
+        window.setDimAmount(0f)
+        window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+        window.statusBarColor = bg
+        window.navigationBarColor = nav
+        WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = lightIcons
+        WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = lightIcons
     }
 }
 
