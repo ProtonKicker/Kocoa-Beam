@@ -48,11 +48,15 @@ Kocoa Beam features a complete UI redesign with:
 
 ### Main Interface
 ![Kocoa Beam Main Screen](docs/images/screenshot_main.png)
-*The main screen showing the Mainsail web frontend card and printer instances with the brutalist bento-box aesthetic. Tested on Honor 9X (Android 10).*
+*The refreshed Profiles screen uses grouped cards, colorful badges, and a floating action layout for a cleaner MIUI-style presentation.*
 
 ### Settings
 ![Kocoa Beam Settings](docs/images/screenshot_settings.png)
-*Settings screen for configuring firmware engine (Klipper/Kalico), web frontend (Mainsail/Fluidd), USB devices, and more.*
+*The updated Settings screen keeps engine, frontend, USB, and app options in flatter grouped surfaces with stronger light-mode contrast.*
+
+### Profile Editor
+![Kocoa Beam Profile Editor](docs/images/screenshot_editor.png)
+*The profile editor now uses clearer bordered fields and a simpler layout for adding or editing printer instances.*
 
 ### Fluidd Frontend (Klipper)
 ![Fluidd Frontend](docs/images/screenshot_fluidd.png)

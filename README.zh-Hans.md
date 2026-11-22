@@ -46,11 +46,15 @@ Kocoa Beam 具有完全的 UI 重新设计：
 
 ### 主界面
 ![Kocoa Beam 主界面](docs/images/screenshot_main.png)
-*主界面展示了打印机实例列表，采用粗野主义 Bento 风格设计。*
+*更新后的 Profiles 主界面采用分组卡片、彩色图标和悬浮操作布局，整体更接近简洁的系统应用风格。*
 
 ### 设置页面
 ![Kocoa Beam 设置](docs/images/screenshot_settings.png)
-*设置页面用于配置固件引擎、Web 前端、USB 设备、摄像头等选项。*
+*新的设置页把固件、前端、USB 和应用选项整理进更扁平的分组区域里，浅色模式下的层次也更清晰。*
+
+### 配置编辑器
+![Kocoa Beam 配置编辑器](docs/images/screenshot_editor.png)
+*新的配置编辑器使用了更清晰的描边输入框和更简单的布局，便于新增或编辑打印机实例。*
 
 ## 选择正确的安装包
 
