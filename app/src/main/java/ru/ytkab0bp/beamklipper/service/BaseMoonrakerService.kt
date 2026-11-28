@@ -103,9 +103,9 @@ open class BaseMoonrakerService(private val num: Int) : BasePythonService() {
     override fun onDestroy() {
         stoppedByUser.set(true)
         releaseLocks()
+        try { stopForeground(true) } catch (_: Throwable) {}
+        try { notificationManager.cancel(BASE_ID + num) } catch (_: Throwable) {}
         super.onDestroy()
-        stopForeground(true)
-        notificationManager.cancel(BASE_ID + num)
     }
 
     override fun onStartPython() {

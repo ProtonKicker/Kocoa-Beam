@@ -476,16 +476,27 @@ private fun FloatingCircleButton(
 }
 
 private fun openWebFrontend(context: Context) {
-    val wm = context.getSystemService(Context.WIFI_SERVICE) as WifiManager
-    val i = wm.connectionInfo.ipAddress
-    val ip = if (i == 0 || !KlipperInstance.isWebServerRunning()) "127.0.0.1" else Formatter.formatIpAddress(i)
+    val ip = resolveWebHost(context)
     val t = System.currentTimeMillis()
     val intent = Intent(Intent.ACTION_VIEW, Uri.parse("http://$ip:${WebService.PORT}/?t=$t"))
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    context.startActivity(intent)
+    runCatching { context.startActivity(intent) }
 }
 
 private fun webIpInfo(context: Context): String {
-    val wm = context.getSystemService(Context.WIFI_SERVICE) as WifiManager
-    return context.getString(R.string.IPInfo, Formatter.formatIpAddress(wm.connectionInfo.ipAddress), WebService.PORT)
+    return context.getString(R.string.IPInfo, resolveWebHost(context), WebService.PORT)
+}
+
+private fun resolveWebHost(context: Context): String {
+    if (!KlipperInstance.isWebServerRunning()) return "127.0.0.1"
+    return try {
+        val wm = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        @Suppress("DEPRECATION")
+        val info = wm.connectionInfo
+        @Suppress("DEPRECATION")
+        val ipInt = info?.ipAddress ?: 0
+        if (ipInt == 0) "127.0.0.1" else Formatter.formatIpAddress(ipInt)
+    } catch (_: Throwable) {
+        "127.0.0.1"
+    }
 }

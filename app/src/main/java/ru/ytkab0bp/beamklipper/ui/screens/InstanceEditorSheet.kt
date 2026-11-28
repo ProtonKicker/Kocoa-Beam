@@ -206,7 +206,7 @@ fun InstanceEditorSheet(
                                 .fillMaxWidth()
                                 .background(fieldColor, fieldShape)
                                 .border(width = 1.dp, color = fieldBorderColor, shape = fieldShape)
-                                .clickable { if (filesReady) showConfigPicker = true }
+                                .clickable(enabled = filesReady) { showConfigPicker = true }
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),

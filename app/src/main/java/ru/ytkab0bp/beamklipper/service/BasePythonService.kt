@@ -115,8 +115,6 @@ open class BasePythonService : Service() {
             if (py == null) {
                 Log.e(TAG, "Failed to start Python after ${retries + 1} attempts, stopping service", lastErr)
                 stopSelf()
-                try { Thread.sleep(100) } catch (_: Throwable) {}
-                android.os.Process.killProcess(android.os.Process.myPid())
             }
         }
     }
@@ -126,7 +124,6 @@ open class BasePythonService : Service() {
         pythonThread?.quitSafely()
         pythonThread = null
         pythonHandler = null
-        android.os.Process.killProcess(android.os.Process.myPid())
     }
 
     protected open fun onStartPython() {}

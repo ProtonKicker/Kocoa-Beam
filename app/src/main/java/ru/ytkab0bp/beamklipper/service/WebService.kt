@@ -65,7 +65,7 @@ import java.util.regex.Pattern
 
 class WebService : Service() {
     companion object {
-        const val PORT = 8889
+        const val PORT = 8888
         private const val ID = 300000
         private const val BEEPER_SAMPLE_RATE = 8000
         private val API_PATTERN = Pattern.compile("^/(printer|api|access|machine|server)/")
@@ -153,61 +153,106 @@ class WebService : Service() {
     }
 
     private fun getMoonrakerPort(): Int {
-        var fallback: Int? = null
-        for (inst in KlipperInstance.getInstances()) {
-            val s = inst.getState()
-            if (s == KlipperInstance.State.RUNNING || s == KlipperInstance.State.STARTING) {
-                val cfg = File(inst.publicDirectory, "config/moonraker.conf")
-                if (cfg.exists()) {
-                    try {
-                        val m = MOONRAKER_PORT_RE.find(cfg.readText())
-                        if (m != null) return m.groupValues[1].toInt()
-                    } catch (_: Exception) {}
-                }
+        val instances = KlipperInstance.getInstances()
+        val running = instances.filter {
+            val s = it.getState()
+            s == KlipperInstance.State.RUNNING || s == KlipperInstance.State.STARTING
+        }
+        for (inst in running) {
+            val cfg = File(inst.publicDirectory, "config/moonraker.conf")
+            if (cfg.exists()) {
                 try {
-                    val raf1 = RandomAccessFile("/proc/net/tcp", "r")
-                    val raf2 = RandomAccessFile("/proc/net/tcp6", "r")
-                    val text1 = try { raf1.channel.map(java.nio.channels.FileChannel.MapMode.READ_ONLY, 0, raf1.channel.size()).let { buf -> val arr = ByteArray(buf.remaining()); buf.get(arr); String(arr, Charsets.US_ASCII) } } finally { raf1.close() }
-                    val text2 = try { raf2.channel.map(java.nio.channels.FileChannel.MapMode.READ_ONLY, 0, raf2.channel.size()).let { buf -> val arr = ByteArray(buf.remaining()); buf.get(arr); String(arr, Charsets.US_ASCII) } } finally { raf2.close() }
-                    val all = "$text1\n$text2"
-                    val re = Regex("^\\s*[0-9A-Fa-f]+:\\s*[0-9A-Fa-f]+:([0-9A-Fa-f]{4})\\s+[0-9A-Fa-f]+:[0-9A-Fa-f]+\\s+0A", RegexOption.MULTILINE)
-                    for (match in re.findAll(all)) {
-                        val p = match.groupValues[1].toInt(16)
-                        if (p in 7100..9000 && (fallback == null || p < fallback)) {
-                            fallback = p
-                        }
+                    val m = MOONRAKER_PORT_RE.find(cfg.readText())
+                    val port = m?.groupValues?.getOrNull(1)?.toIntOrNull()
+                    if (port != null && port in 1..65535 && BaseMoonrakerService.probePort(port, 150)) {
+                        return port
                     }
-                } catch (_: Throwable) {}
+                } catch (_: Exception) {}
             }
         }
-        return fallback ?: 7125
+        for (inst in instances) {
+            val cfg = File(inst.publicDirectory, "config/moonraker.conf")
+            if (cfg.exists()) {
+                try {
+                    val m = MOONRAKER_PORT_RE.find(cfg.readText())
+                    val port = m?.groupValues?.getOrNull(1)?.toIntOrNull()
+                    if (port != null && port in 1..65535 && BaseMoonrakerService.probePort(port, 150)) {
+                        return port
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+        return 7125
     }
 
     private external fun generateTone(numSamples: Int, freq: Float): FloatArray
 
-    private fun playTone(duration: Int, frequency: Int) {
-        val numSamples = duration * BEEPER_SAMPLE_RATE
-        val buffer = generateTone(numSamples, frequency.toFloat() / BEEPER_SAMPLE_RATE)
-        val track = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            AudioTrack.Builder()
-                .setAudioFormat(AudioFormat.Builder()
-                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                    .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
-                    .setSampleRate(BEEPER_SAMPLE_RATE)
-                    .build())
-                .setAudioAttributes(AudioAttributes.Builder()
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build())
-                .setBufferSizeInBytes(2 * numSamples)
-                .setTransferMode(AudioTrack.MODE_STATIC)
-                .build()
-        } else {
-            AudioTrack(AudioManager.STREAM_MUSIC, BEEPER_SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO,
-                AudioFormat.ENCODING_PCM_FLOAT, 2 * numSamples, AudioTrack.MODE_STATIC)
+    private fun playTone(durationMs: Int, frequencyHz: Int) {
+        val safeDurationMs = durationMs.coerceIn(1, 10_000)
+        val safeFrequencyHz = frequencyHz.coerceIn(20, 20_000)
+        val numSamples = ((safeDurationMs.toLong() * BEEPER_SAMPLE_RATE) / 1000L)
+            .toInt()
+            .coerceIn(1, BEEPER_SAMPLE_RATE * 10)
+        val buffer = try {
+            generateTone(numSamples, safeFrequencyHz.toFloat() / BEEPER_SAMPLE_RATE.toFloat())
+        } catch (t: Throwable) {
+            Log.w("WebService", "Failed to generate tone", t)
+            return
         }
-        track.write(buffer, 0, buffer.size, AudioTrack.WRITE_BLOCKING)
-        track.play()
-        beeperHandler?.postDelayed({ track.release() }, duration.toLong())
+        if (buffer.isEmpty()) return
+        val bufferBytes = buffer.size * 4
+        val track = try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                AudioTrack.Builder()
+                    .setAudioFormat(AudioFormat.Builder()
+                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                        .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
+                        .setSampleRate(BEEPER_SAMPLE_RATE)
+                        .build())
+                    .setAudioAttributes(AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build())
+                    .setBufferSizeInBytes(bufferBytes)
+                    .setTransferMode(AudioTrack.MODE_STATIC)
+                    .build()
+            } else {
+                @Suppress("DEPRECATION")
+                AudioTrack(
+                    AudioManager.STREAM_MUSIC,
+                    BEEPER_SAMPLE_RATE,
+                    AudioFormat.CHANNEL_OUT_MONO,
+                    AudioFormat.ENCODING_PCM_FLOAT,
+                    bufferBytes,
+                    AudioTrack.MODE_STATIC
+                )
+            }
+        } catch (t: Throwable) {
+            Log.w("WebService", "Failed to create AudioTrack", t)
+            return
+        }
+        try {
+            track.write(buffer, 0, buffer.size, AudioTrack.WRITE_BLOCKING)
+            track.play()
+        } catch (t: Throwable) {
+            Log.w("WebService", "Failed to play tone", t)
+            try { track.release() } catch (_: Throwable) {}
+            return
+        }
+        val releaseRunnable = Runnable {
+            try {
+                track.stop()
+            } catch (_: Throwable) {}
+            try {
+                track.release()
+            } catch (_: Throwable) {}
+        }
+        val h = beeperHandler
+        if (h != null) {
+            h.postDelayed(releaseRunnable, safeDurationMs.toLong() + 100L)
+        } else {
+            releaseRunnable.run()
+        }
     }
 
     private data class ParsedCmd(
@@ -247,18 +292,31 @@ class WebService : Service() {
     }
 
     private fun expandWildcard(path: String): List<File> {
+        val filesDir = KlipperApp.INSTANCE.filesDir.canonicalPath
+        val cacheDir = KlipperApp.INSTANCE.cacheDir.canonicalPath
+        fun inAllowed(p: String): Boolean {
+            val c = try { File(p).canonicalPath } catch (_: Throwable) { return false }
+            return c == filesDir || c.startsWith(filesDir + File.separator) ||
+                c == cacheDir || c.startsWith(cacheDir + File.separator)
+        }
         if (!path.contains("*") && !path.contains("?")) {
             val f = File(path)
-            return if (f.exists()) listOf(f) else emptyList()
+            return if (f.exists() && inAllowed(f.path)) listOf(f) else emptyList()
         }
         val parent = File(path).parentFile ?: File("/")
+        if (!inAllowed(parent.path)) return emptyList()
         val namePattern = File(path).name
             .replace(".", "\\.")
             .replace("*", ".*")
             .replace("?", ".")
             .toRegex()
         val files = parent.listFiles() ?: emptyArray()
-        return files.filter { namePattern.matches(it.name) && it.isFile }.sortedBy { it.name }
+        return files
+            .asSequence()
+            .filter { it.isFile && namePattern.matches(it.name) && inAllowed(it.path) }
+            .sortedBy { it.name }
+            .take(2000)
+            .toList()
     }
 
     private fun buildTransformMatrix(filter: String?, width: Int, height: Int): Matrix {
@@ -496,6 +554,15 @@ class WebService : Service() {
         }
     }
 
+    private fun isAllowedMediaPath(path: String): Boolean {
+        val f = try { File(path).canonicalFile } catch (_: Throwable) { return false }
+        val p = f.path
+        val filesDir = KlipperApp.INSTANCE.filesDir.canonicalPath
+        val cacheDir = KlipperApp.INSTANCE.cacheDir.canonicalPath
+        return p == filesDir || p.startsWith(filesDir + File.separator) ||
+            p == cacheDir || p.startsWith(cacheDir + File.separator)
+    }
+
     private fun executeFfmpegReplacement(cmd: String): String {
         Log.d("beam_ffmpeg", "Received cmd: $cmd")
         val parsed = parseFfmpegCmd(cmd)
@@ -505,11 +572,32 @@ class WebService : Service() {
             Log.e("beam_ffmpeg", "Missing input or output path")
             return ""
         }
+        if (!isAllowedMediaPath(parsed.outputPath)) {
+            Log.w("beam_ffmpeg", "Rejected output path outside app storage: ${parsed.outputPath}")
+            return ""
+        }
+        val inputWildcard = parsed.inputPath.contains("*") || parsed.inputPath.contains("?")
+        if (!inputWildcard && !isAllowedMediaPath(parsed.inputPath)) {
+            Log.w("beam_ffmpeg", "Rejected input path outside app storage: ${parsed.inputPath}")
+            return ""
+        }
+        if (inputWildcard) {
+            val parent = File(parsed.inputPath).parent ?: ""
+            if (parent.isNotBlank() && !isAllowedMediaPath(parent)) {
+                Log.w("beam_ffmpeg", "Rejected wildcard input parent outside app storage: $parent")
+                return ""
+            }
+        }
 
-        return if (parsed.fps == null) {
-            processSingleImage(parsed)
-        } else {
-            processTimelapse(parsed)
+        return try {
+            if (parsed.fps == null) {
+                processSingleImage(parsed)
+            } else {
+                processTimelapse(parsed)
+            }
+        } catch (t: Throwable) {
+            Log.e("beam_ffmpeg", "ffmpeg replacement failed", t)
+            ""
         }
     }
 
@@ -677,13 +765,25 @@ class WebService : Service() {
                         }
                     }
                     val responseCode = runCatching { con.responseCode }.getOrElse { (it as? IOException)?.let { _ -> HttpURLConnection.HTTP_INTERNAL_ERROR } ?: 500 }
-                    val responseStream = runCatching { if (responseCode in 200..299) con.inputStream else con.errorStream }.getOrNull()
+                    val rawStream = runCatching { if (responseCode in 200..299) con.inputStream else con.errorStream }.getOrNull()
                     val resStatus = Status.lookup(responseCode)
                         ?: object : org.nanohttpd.protocols.http.response.IStatus {
-                            override fun getDescription(): String = con.responseMessage ?: "Unknown"
+                            override fun getDescription(): String = runCatching { con.responseMessage }.getOrNull() ?: "Unknown"
                             override fun getRequestStatus(): Int = responseCode
                         }
+                    val responseStream = rawStream?.let { src ->
+                        object : java.io.FilterInputStream(src) {
+                            private var closed = false
+                            override fun close() {
+                                if (closed) return
+                                closed = true
+                                try { super.close() } catch (_: Throwable) {}
+                                try { con.disconnect() } catch (_: Throwable) {}
+                            }
+                        }
+                    }
                     if (responseStream == null) {
+                        try { con.disconnect() } catch (_: Throwable) {}
                         return Response.newFixedLengthResponse(resStatus, "text/plain", "")
                     }
                     val contentLength = runCatching { con.contentLength }.getOrElse { -1 }

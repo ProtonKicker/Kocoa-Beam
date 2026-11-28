@@ -82,7 +82,7 @@ object UsbSerialManager {
             addAction(ACTION_ON_DEVICE_CONNECTED)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ctx.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            ctx.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
         } else {
             ctx.registerReceiver(receiver, filter)
         }

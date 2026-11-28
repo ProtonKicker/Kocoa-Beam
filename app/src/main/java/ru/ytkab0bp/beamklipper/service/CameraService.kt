@@ -75,6 +75,9 @@ class CameraService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var wifiLock: WifiManager.WifiLock? = null
     private val stoppedByUser = java.util.concurrent.atomic.AtomicBoolean(false)
+    @Volatile private var serverSocket: ServerSocket? = null
+    @Volatile private var cameraDevice: CameraDevice? = null
+    @Volatile private var imageReader: ImageReader? = null
 
     private val serviceBinder = object : Binder() {
         override fun getInterfaceDescriptor(): String = DESCRIPTOR
@@ -190,10 +193,14 @@ class CameraService : Service() {
 
         cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
         try {
-            val id = cameraManager.cameraIdList[0]
-            cameraManager.openCamera(Prefs.cameraId ?: id, object : CameraDevice.StateCallback() {
-                private val bufferStack = java.util.Stack<ByteArray>()
-                private var bufferSize = 0
+            val idList = cameraManager.cameraIdList
+            if (idList.isEmpty()) {
+                Log.w(TAG, "No camera devices available")
+                return
+            }
+            val preferred = Prefs.cameraId
+            val selected = if (preferred != null && idList.contains(preferred)) preferred else idList[0]
+            cameraManager.openCamera(selected, object : CameraDevice.StateCallback() {
 
                 override fun onOpened(camera: CameraDevice) {
                     try {
@@ -215,6 +222,8 @@ class CameraService : Service() {
                         }
                         val targets = ArrayList<Surface>()
                         val reader = ImageReader.newInstance(width, height, ImageFormat.YUV_420_888, 4)
+                        imageReader = reader
+                        cameraDevice = camera
                         reader.setOnImageAvailableListener({ r ->
                             val img = r.acquireLatestImage() ?: return@setOnImageAvailableListener
                             if (handlerThreads.isEmpty()) {
@@ -222,34 +231,22 @@ class CameraService : Service() {
                                 return@setOnImageAvailableListener
                             }
                             IO_POOL.submit {
-                                val yBuffer = img.planes[0].buffer
-                                val uBuffer = img.planes[1].buffer
-                                val vBuffer = img.planes[2].buffer
+                                try {
+                                    val yPlane = img.planes[0]
+                                    val uPlane = img.planes[1]
+                                    val vPlane = img.planes[2]
 
-                                val ySize = yBuffer.remaining()
-                                val uSize = uBuffer.remaining()
-                                val vSize = vBuffer.remaining()
-
-                                val bufSize = ySize + uSize + vSize
-                                if (bufferSize < bufSize) {
-                                    bufferStack.clear()
-                                    bufferSize = bufSize
+                                    val nv21 = yuv420ToNv21(img.width, img.height, yPlane, uPlane, vPlane)
+                                    val yuvImage = YuvImage(nv21, ImageFormat.NV21, img.width, img.height, null)
+                                    val conv = ByteArrayOutputStream()
+                                    yuvImage.compressToJpeg(Rect(0, 0, img.width, img.height), 85, conv)
+                                    val converted = conv.toByteArray()
+                                    deliverFrame(converted, converted.size) {}
+                                } catch (t: Throwable) {
+                                    Log.w(TAG, "Failed to process camera frame", t)
+                                } finally {
+                                    try { img.close() } catch (_: Exception) {}
                                 }
-                                val buffer = if (bufferStack.isEmpty()) ByteArray(bufferSize) else bufferStack.pop()
-
-                                yBuffer.get(buffer, 0, ySize)
-                                vBuffer.get(buffer, ySize, vSize)
-                                uBuffer.get(buffer, ySize + vSize, uSize)
-
-                                val yuvImage = YuvImage(buffer, ImageFormat.NV21, img.width, img.height, null)
-                                val conv = ByteArrayOutputStream()
-                                yuvImage.compressToJpeg(Rect(0, 0, img.width, img.height), 85, conv)
-                                bufferStack.push(buffer)
-
-                                val converted = conv.toByteArray()
-                                deliverFrame(converted, converted.size) {}
-
-                                img.close()
                             }
                         }, cameraHandler)
                         targets.add(reader.surface)
@@ -258,26 +255,24 @@ class CameraService : Service() {
                                 Log.d(TAG, "Configured")
                                 captureSession = session
                                 try {
-                                    captureRequestBuilder = camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-                                    val rangeArray = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES) ?: throw RuntimeException("No FPS ranges")
-                                    var selectedRange: Range<Int>? = null
-                                    for (r in rangeArray) {
-                                        if (r.upper < 25) {
-                                            selectedRange = r
-                                            break
-                                        }
+                                    val builder = camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+                                    captureRequestBuilder = builder
+                                    val rangeArray = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)
+                                    if (rangeArray != null && rangeArray.isNotEmpty()) {
+                                        val selectedRange = rangeArray.firstOrNull { it.upper < 25 } ?: rangeArray[0]
+                                        builder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, selectedRange)
                                     }
-                                    if (selectedRange == null) selectedRange = rangeArray[0]
-                                    captureRequestBuilder!!.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, selectedRange)
-                                    captureRequestBuilder!!.set(CaptureRequest.FLASH_MODE,
+                                    builder.set(CaptureRequest.FLASH_MODE,
                                         if (Prefs.isFlashlightEnabled) CaptureRequest.FLASH_MODE_TORCH else CaptureRequest.FLASH_MODE_OFF)
-                                    captureRequestBuilder!!.set(CaptureRequest.LENS_FOCUS_DISTANCE, Prefs.focusDistance)
-                                    captureRequestBuilder!!.set(CaptureRequest.CONTROL_AF_MODE,
+                                    builder.set(CaptureRequest.CONTROL_AF_MODE,
                                         if (Prefs.isAutofocusEnabled) CaptureRequest.CONTROL_AF_MODE_AUTO else CaptureRequest.CONTROL_AF_MODE_OFF)
-                                    captureRequestBuilder!!.addTarget(reader.surface)
-                                    session.setRepeatingRequest(captureRequestBuilder!!.build(), null, null)
-                                } catch (e: CameraAccessException) {
-                                    throw RuntimeException(e)
+                                    if (!Prefs.isAutofocusEnabled) {
+                                        builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, Prefs.focusDistance)
+                                    }
+                                    builder.addTarget(reader.surface)
+                                    session.setRepeatingRequest(builder.build(), null, cameraHandler)
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "Failed to configure camera capture session", e)
                                 }
                             }
 
@@ -310,11 +305,71 @@ class CameraService : Service() {
         }
     }
 
+    private fun yuv420ToNv21(
+        width: Int,
+        height: Int,
+        yPlane: Image.Plane,
+        uPlane: Image.Plane,
+        vPlane: Image.Plane
+    ): ByteArray {
+        val ySize = width * height
+        val out = ByteArray(ySize + (width * height / 2))
+
+        val yBuffer = yPlane.buffer.duplicate()
+        val uBuffer = uPlane.buffer.duplicate()
+        val vBuffer = vPlane.buffer.duplicate()
+        yBuffer.rewind(); uBuffer.rewind(); vBuffer.rewind()
+
+        val yRowStride = yPlane.rowStride
+        val yPixelStride = yPlane.pixelStride
+        var pos = 0
+        for (row in 0 until height) {
+            val rowStart = row * yRowStride
+            if (yPixelStride == 1) {
+                yBuffer.position(rowStart)
+                yBuffer.get(out, pos, width)
+                pos += width
+            } else {
+                for (col in 0 until width) {
+                    out[pos++] = yBuffer.get(rowStart + col * yPixelStride)
+                }
+            }
+        }
+
+        val chromaHeight = height / 2
+        val chromaWidth = width / 2
+        val uRowStride = uPlane.rowStride
+        val vRowStride = vPlane.rowStride
+        val uPixelStride = uPlane.pixelStride
+        val vPixelStride = vPlane.pixelStride
+        for (row in 0 until chromaHeight) {
+            val uRowStart = row * uRowStride
+            val vRowStart = row * vRowStride
+            for (col in 0 until chromaWidth) {
+                val uIndex = uRowStart + col * uPixelStride
+                val vIndex = vRowStart + col * vPixelStride
+                out[pos++] = vBuffer.get(vIndex)
+                out[pos++] = uBuffer.get(uIndex)
+            }
+        }
+        return out
+    }
+
     private fun deliverFrame(data: ByteArray, size: Int, onRelease: () -> Unit) {
-        val done = AtomicInteger()
-        val total = handlerThreads.size
-        for (t in handlerThreads) {
-            t.handler.post {
+        val clients = handlerThreads.toList()
+        val total = clients.size
+        if (total == 0) {
+            onRelease()
+            return
+        }
+        val done = AtomicInteger(0)
+        for (t in clients) {
+            val h = try { t.handler } catch (_: Throwable) { null }
+            if (h == null) {
+                if (done.incrementAndGet() == total) onRelease()
+                continue
+            }
+            h.post {
                 try {
                     val out = t.out
                     if (!t.oneShot) {
@@ -330,13 +385,12 @@ class CameraService : Service() {
                         t.quit()
                     }
                 } catch (e: Exception) {
-                    if (t.socket.isClosed) {
-                        Log.e(TAG, "Failed to deliver frame", e)
-                        t.quit()
+                    Log.w(TAG, "Failed to deliver frame", e)
+                    t.quit()
+                } finally {
+                    if (done.incrementAndGet() == total) {
+                        onRelease()
                     }
-                }
-                if (done.incrementAndGet() == total) {
-                    onRelease()
                 }
             }
         }
@@ -345,37 +399,50 @@ class CameraService : Service() {
     override fun onDestroy() {
         stoppedByUser.set(true)
         super.onDestroy()
-        captureSession?.close()
+        try { captureSession?.close() } catch (_: Throwable) {}
         captureSession = null
+        try { imageReader?.close() } catch (_: Throwable) {}
+        imageReader = null
+        try { cameraDevice?.close() } catch (_: Throwable) {}
+        cameraDevice = null
         for (h in handlerThreads) h.quit()
         handlerThreads.clear()
+        try { serverSocket?.close() } catch (_: Exception) {}
+        serverSocket = null
         serverThread?.interrupt()
-        cameraThread?.quit()
+        cameraThread?.quitSafely()
         cameraHandler = null
-        stopForeground(true)
+        cameraThread = null
+        try { stopForeground(true) } catch (_: Throwable) {}
         notificationManager?.cancel(ID)
-        unregisterReceiver(receiver)
+        try { unregisterReceiver(receiver) } catch (_: Throwable) {}
         releaseLocks()
-        android.os.Process.killProcess(android.os.Process.myPid())
     }
 
-    private class ServerThread : Thread() {
-        init {
-            name = "beam_camera_server"
-            isDaemon = true
-        }
+    private inner class ServerThread : Thread("beam_camera_server") {
+        init { isDaemon = true }
 
         override fun run() {
             Process.setThreadPriority(-10)
             try {
                 val socket = ServerSocket(PORT)
+                serverSocket = socket
                 while (!isInterrupted) {
-                    val sock = socket.accept()
-                    CameraHandlerThread(sock)
+                    val sock = try { socket.accept() } catch (_: Exception) {
+                        if (isInterrupted || socket.isClosed) break else continue
+                    }
+                    try {
+                        CameraHandlerThread(sock)
+                    } catch (t: Throwable) {
+                        Log.e(TAG, "Failed to handle camera client", t)
+                        try { sock.close() } catch (_: Exception) {}
+                    }
                 }
-                socket.close()
+                try { socket.close() } catch (_: Exception) {}
             } catch (e: Exception) {
-                throw RuntimeException(e)
+                Log.e(TAG, "Camera server thread failed", e)
+            } finally {
+                serverSocket = null
             }
         }
     }
@@ -393,10 +460,10 @@ class CameraService : Service() {
         init {
             val input = sock.getInputStream()
             val r = BufferedReader(InputStreamReader(input))
-            val line = r.readLine()
+            val line = try { r.readLine() } catch (_: Exception) { null }
             if (line != null) {
                 val m = PATH_PATTERN.matcher(line)
-                oneShot = m.find() && m.group(1).startsWith("/snapshot")
+                oneShot = m.find() && m.group(1)?.startsWith("/snapshot") == true
             } else {
                 oneShot = false
             }
@@ -409,7 +476,7 @@ class CameraService : Service() {
                     out.flush()
                     handlerThreads.add(this@CameraHandlerThread)
                 } catch (e: Exception) {
-                    Log.e(name, "Failed to write headers", e)
+                    Log.w(name, "Failed to write headers", e)
                     quit()
                 }
             }
