@@ -235,7 +235,6 @@ fun ConfigScreen(
                     }
                 )
                 HorizontalDivider(
-                    modifier = Modifier.padding(start = 76.dp),
                     color = MaterialTheme.colorScheme.outlineVariant
                 )
                 GroupActionRow(
