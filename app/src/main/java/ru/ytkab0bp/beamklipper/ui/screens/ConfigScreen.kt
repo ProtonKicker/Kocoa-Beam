@@ -196,11 +196,17 @@ fun ConfigScreen(
                         background = BadgeTeal,
                         contentColor = Color.White
                     )
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(20.dp))
                     Text(
                         text = stringResource(R.string.ListUSB),
                         style = MaterialTheme.typography.titleMedium,
                         color = onSurface
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Transparent
                     )
                 }
             }
