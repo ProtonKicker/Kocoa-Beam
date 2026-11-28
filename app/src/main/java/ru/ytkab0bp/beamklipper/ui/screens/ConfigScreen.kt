@@ -118,7 +118,7 @@ fun ConfigScreen(
                     )
                     Spacer(Modifier.height(20.dp))
                     Text(
-                        text = stringResource(R.string.FirmwareEngine),
+                        text = stringResource(R.string.Firmware),
                         style = MaterialTheme.typography.titleMedium,
                         color = onSurface
                     )

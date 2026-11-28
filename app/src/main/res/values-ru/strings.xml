@@ -52,7 +52,7 @@
     <string name="Search">Поиск</string>
     <string name="Camera">Камера</string>
     <string name="EnableCamera">Включить сервер камеры</string>
-    <string name="ListUSB">Отобразить список USB устройств</string>
+    <string name="ListUSB">USB устройства</string>
     <string name="ListUSBTitle">USB устройства</string>
     <string name="ListUSBNoDevices">USB устройства не найдены</string>
     <string name="USBDeviceNaming">Наименование устройств</string>
@@ -63,7 +63,7 @@
     <string name="Klipper" translatable="false">Klipper</string>
     <string name="General">Основное</string>
     <string name="WebFrontend">Веб-интерфейс</string>
-    <string name="FirmwareEngine">Движок прошивки</string>
+    <string name="Firmware">Прошивка</string>
     <string name="EngineNotBundled">Файлы Kalico ещё не установлены. Соберите приложение и откройте его заново, чтобы использовать этот движок.</string>
     <string name="EngineRestartRequired">Перезапустите запущенные профили, чтобы смена движка прошивки вступила в силу.</string>
     <string name="AppLanguage">Язык приложения</string>

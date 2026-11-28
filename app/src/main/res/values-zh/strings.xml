@@ -52,7 +52,7 @@
     <string name="Search">搜索</string>
     <string name="Camera">摄像头</string>
     <string name="EnableCamera">启用摄像头服务器</string>
-    <string name="ListUSB">列出 USB 设备</string>
+    <string name="ListUSB">USB 设备</string>
     <string name="ListUSBTitle">USB 设备</string>
     <string name="ListUSBNoDevices">未找到 USB 设备</string>
     <string name="USBDeviceNaming">设备命名</string>
@@ -61,7 +61,7 @@
     <string name="Autostart">自动启动</string>
     <string name="General">通用</string>
     <string name="WebFrontend">Web 前端</string>
-    <string name="FirmwareEngine">固件引擎</string>
+    <string name="Firmware">固件</string>
     <string name="EngineNotBundled">Kalico 文件尚未安装。请先构建应用并重新打开后再切换到该引擎。</string>
     <string name="EngineRestartRequired">固件引擎切换后，需要重启正在运行的配置才能生效。</string>
     <string name="AppLanguage">应用语言</string>

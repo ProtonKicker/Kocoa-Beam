@@ -54,7 +54,7 @@
     <string name="Camera">Camera</string>
     <string name="EnableCamera">Enable camera server</string>
     <string name="USB" translatable="false">USB</string>
-    <string name="ListUSB">List USB devices</string>
+    <string name="ListUSB">USB devices</string>
     <string name="ListUSBTitle">USB devices</string>
     <string name="ListUSBNoDevices">USB devices not found</string>
     <string name="USBDeviceNaming">Device naming</string>
@@ -68,7 +68,7 @@
     <string name="IPInfo" translatable="false">http://%s:%d/</string>
     <string name="General">General</string>
     <string name="WebFrontend">Web frontend</string>
-    <string name="FirmwareEngine">Firmware engine</string>
+    <string name="Firmware">Firmware</string>
     <string name="EngineNotBundled">Kalico files are not installed yet. Build and reopen the app to use this engine.</string>
     <string name="EngineRestartRequired">Restart running profiles for the firmware engine change to take effect.</string>
     <string name="AppLanguage">App language</string>
